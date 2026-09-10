@@ -16,7 +16,7 @@ Smali → Java → JNI → servidor.
 *Metodos*  
 - d(string,strin)
 - hookEnter()
-- 
+- hookExit() 
 
 [log_server.py](url) Quin resive la conexión desde la libreria
 
@@ -30,10 +30,22 @@ Smali → Java → JNI → servidor.
 
 # Uso
 
+
 - lib 
 - dex-inj
 
 Pasar el contenido a la apk objetivo  
+
+```java
+public int miFuncion(String a) {
+    RemoteLogger.hookEnter("miFuncion", "a", a);
+    int r = /* ... */;
+    RemoteLogger.hookExit("miFuncion", r);
+    return r;
+}
+```
+
+Usar `d(...)` solo para log sueltos de depuracion 
 
 
 ### Representacion en smali 
