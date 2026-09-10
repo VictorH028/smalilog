@@ -9,15 +9,37 @@ Flujo
 Smali → Java → JNI → servidor.
 
 
-Metodos 
+### Archivos 
 
+[RemoteLogger](url) contiene el codigo  java que se utiliza despues a nivel de smali 
+
+*Metodos*  
 - d(string,strin)
-- e(string,strin)
 - hookEnter()
 - 
 
+[log_server.py](url) Quin resive la conexión desde la libreria
+
+>> Pendiente
+> [] - Mejorar la conexión
+
+[native_logger](url) Encargada de la comunicasion con el servidor
+
+>> Pendiente
+> 
+
+# Uso
+
+- lib 
+- dex-inj
+
+Pasar el contenido a la apk objetivo  
+
+
+### Representacion en smali 
+
 > [!NOTE]
-> ..... 
+> Para evitar conflictos en el codigo hay que manipular bien los registros 
 
 ```smali
     const-string p1, "Network"
@@ -49,7 +71,7 @@ Metodos
 # Compilacion de la lib 
 
 ```bash 
-aarch64-linux-android-clang -shared -fPIC -std=c++17 -O2 -fno-exceptions -fno-rtti -o liblogger.so native_logger.cpp -I/usr/lib/jvm/java-8-openjdk-amd64/include -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
+aarch64-linux-android-clang -shared -fPIC -O2 -fno-exceptions -fno-rtti -o liblogger.so native_logger.c -I/usr/lib/jvm/java-8-openjdk-amd64/include -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
 ```
 
 # Comprobacion basica 
