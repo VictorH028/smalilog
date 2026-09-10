@@ -1,0 +1,4 @@
+2026-09-09 19:02:42,561 - ERROR - [Network] Error de conexión simulado
+2026-09-09 19:02:42,565 - INFO - [MainActivity] onCreate iniciado
+2026-09-09 20:02:29,750 - ERROR - [Network] Error de conexión simulado
+2026-09-09 20:23:47,776 - ERROR - [Network] Error de conexión simulado
