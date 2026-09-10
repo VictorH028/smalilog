@@ -1,3 +1,6 @@
+
+![banner](./.img/pre.png) 
+
 # Remote Logger
 
 Sistema experimental de **logging remoto para Android** basado en:
