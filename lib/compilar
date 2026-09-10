@@ -1,1 +1,0 @@
-aarch64-linux-android-clang -shared -fPIC -std=c++17 -O2 -fno-exceptions -fno-rtti -o liblogger.so native_logger.cpp -I/usr/lib/jvm/java-8-openjdk-amd64/include -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
