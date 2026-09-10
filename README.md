@@ -1,12 +1,8 @@
 
 # Todo echo desde termux 
 
-1) - Pasar la libreria a la app objetivo 
-
-2) - Pasar el ==dex== para poder cargar la linbreria y usar sus metodos 
-
-Flujo 
-Smali → Java → JNI → servidor.
+## Flujo 
+Smali  → JNI → servidor.
 
 
 ### Archivos 
@@ -15,26 +11,36 @@ Smali → Java → JNI → servidor.
 
 *Metodos*  
 - d(string,strin)
-- hookEnter()
-- hookExit() 
+- hookEnter(...)
+- hookExit(...) 
 
-[log_server.py](url) Quin resive la conexión desde la libreria
+[log_server.py](url) Quien resive la conexión..
 
 >> Pendiente
+> [] - Crear una pagina 
 > [] - Mejorar la conexión
 
-[native_logger](url) Encargada de la comunicasion con el servidor
+
+[native_logger.os](url) Encargada de la comunicasion con el servidor
 
 >> Pendiente
 > 
 
 # Uso
 
-
 - lib 
 - dex-inj
 
 Pasar el contenido a la apk objetivo  
+
+![alt text](path) 
+
+![alt text](path) 
+
+![alt text](path) 
+
+
+Ejemolo es java
 
 ```java
 public int miFuncion(String a) {
@@ -53,34 +59,71 @@ Usar `d(...)` solo para log sueltos de depuracion
 > [!NOTE]
 > Para evitar conflictos en el codigo hay que manipular bien los registros 
 
-```smali
-    const-string p1, "Network"
+[Smali informacion]url) 
 
-    const-string v0, "Conexión desde onCreat"
+Tip:null 
+Llamada Java: 
+  RemoteLogger.hookEnter("testFunction", "argNull", null);
+Llamada Smali:
 
-    invoke-static {p1, v0}, Lcom/deadnote/RemoteLogger;->d(Ljava/lang/String;Ljava/lang/String;)V
-```
+-----------------------
+Tipo: String
+Llamada java: 
+  RemoteLogger.hookEnter("testFunction", "argString", "test value");
+Llamada Smali:
+
+-----------------------
+Tipo: Boolean
+Llamada java: 
+  RemoteLogger.hookEnter("testFunction", "argBooleanTrue",  true);
+Llamada Smali:
+
+-----------------------
+Tipo: Integre 
+Llamada java: 
+  RemoteLogger.hookEnter("testFunction", "argInteger", 42);
+Llamada Smali:
+
+-----------------------
+Tipo: Long
+Llamada java: 
+ RemoteLogger.hookEnter("testFunction", "argLong",    123456789L);
+Llamada Smali:
+
+-----------------------
+Tipo: Boolean
+Llamada java: 
+  RemoteLogger.hookEnter("testFunction", "argDouble",  3.14159);
+Llamada Smali:
+
+-----------------------
+Tipo: Float
+Llamada java: 
+  RemoteLogger.hookEnter("testFunction", "argFloat",   2.5f);
+Llamada Smali:
+
+-----------------------
+Tipo: int[]: [I@xxxx
+Llamada java: 
+  RemoteLogger.hookEnter("testFunction", "argArray",   new int[]{1, 2, 3});
+Llamada Smali:
+
+-----------------------
+Tipo: Object
+Llamada java: 
+ RemoteLogger.hookEnter("testFunction", "argObject",  new Object());
+Llamada Smali:
+
+-----------------------
+Tipo: Bundle
+java: 
+ RemoteLogger.hookEnter("testFunction", "argBundle",  savedInstanceState);
+Smali:
+
+-----------------------
 
 
-```smali
-# ========== HOOK ENTER ==========
-    const-string v0, "decodeBytesNative"    # function name
-    const-string v1, "input"                # argument name
-    move-object v2, p1                      # argument value (byte[])
-    invoke-static {v0, v1, v2}, Lcom/deadnote/RemoteLogger;->hookEnter(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V
-    # =================================
-```
-
-```smali 
-    # ========== HOOK EXIT ==========
-    const-string v0, "decodeBytesNative"    # function name
-    move-object v1, v3                      # result
-    invoke-static {v0, v1}, Lcom/deadnote/RemoteLogger;->hookExit(Ljava/lang/String;Ljava/lang/Object;)V
-    # ================================
-```
-
-
-# Compilacion de la lib 
+# Si deceas colaboral  
 
 ```bash 
 aarch64-linux-android-clang -shared -fPIC -O2 -fno-exceptions -fno-rtti -o liblogger.so native_logger.c -I/usr/lib/jvm/java-8-openjdk-amd64/include -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
@@ -90,7 +133,7 @@ aarch64-linux-android-clang -shared -fPIC -O2 -fno-exceptions -fno-rtti -o liblo
 
 > Solo pueden estar estas 2 
 
-```
+```bash 
 readelf -d liblogger.so | grep NEEDED
   0x0000000000000001 (NEEDED)       Shared library: [libdl.so]
   0x0000000000000001 (NEEDED)       Shared library: [libc.so]
