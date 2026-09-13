@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 """
-smali_hook.py - Inyecta hooks de observación en archivos Smali
+smalilog.injector.hooker
+Inyecta hooks de observación en archivos Smali.
 
-Uso:
-    python3 smali_hook.py archivo.smali --method metodo --action observ
-    python3 smali_hook.py archivo.smali --method metodo --action enter
-    python3 smali_hook.py archivo.smali --method metodo --action exit
-    python3 smali_hook.py archivo.smali --method metodo --action both
-    python3 smali_hook.py archivo.smali --method metodo --action d --tag MiTag --message "Hola"
+API programática:
+    from smalilog.injector.hooker import run_hooker
+    run_hooker(["archivo.smali", "--method", "Sf", "--action", "both"])
 """
+
+from __future__ import annotations
 
 import argparse
 import re
-import sys
 import shutil
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
+
 
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
 
 REMOTE_LOGGER_CLASS = "Lcom/deadnote/RemoteLogger;"
+
 
 # ============================================================
 # COLORES
@@ -38,14 +40,16 @@ class Color:
     RESET = '\033[0m'
     BOLD = '\033[1m'
 
-def log_info(msg):    print(f"{Color.BLUE}[INFO]{Color.RESET} {msg}")
-def log_ok(msg):      print(f"{Color.GREEN}[OK]{Color.RESET} {msg}")
-def log_warn(msg):    print(f"{Color.YELLOW}[WARN]{Color.RESET} {msg}")
-def log_error(msg):   print(f"{Color.RED}[ERROR]{Color.RESET} {msg}")
+
+def log_info(msg):  print(f"{Color.BLUE}[INFO]{Color.RESET} {msg}")
+def log_ok(msg):    print(f"{Color.GREEN}[OK]{Color.RESET} {msg}")
+def log_warn(msg):  print(f"{Color.YELLOW}[WARN]{Color.RESET} {msg}")
+def log_error(msg): print(f"{Color.RED}[ERROR]{Color.RESET} {msg}")
 def log_header(msg):
     print(f"\n{Color.BOLD}{Color.CYAN}{'='*60}{Color.RESET}")
     print(f"{Color.BOLD}{Color.CYAN}{msg}{Color.RESET}")
     print(f"{Color.BOLD}{Color.CYAN}{'='*60}{Color.RESET}\n")
+
 
 # ============================================================
 # PARSER
@@ -56,8 +60,8 @@ class SmaliMethod:
         self.name = name
         self.signature = signature
         self.access = access
-        self.registers = registers        # valor total de .registers o .locals
-        self.is_locals = is_locals        # True si la directiva era .locals
+        self.registers = registers
+        self.is_locals = is_locals
         self.start_line = start_line
         self.end_line = end_line
         self.parameters = self._parse_parameters()
@@ -119,7 +123,6 @@ def parse_smali_file(content):
                 registers = 0
                 is_locals = False
                 j = i + 1
-                # Buscamos .registers o .locals hasta el end method
                 while j < len(lines) and not lines[j].strip().startswith('.end method'):
                     reg_match = re.match(r'\s*\.(registers|locals)\s+(\d+)', lines[j])
                     if reg_match:
@@ -142,30 +145,21 @@ def parse_smali_file(content):
 # ============================================================
 
 def _type_size(desc: str) -> int:
-    """J (long) y D (double) ocupan 2 registros. Todo lo demás, 1."""
     if desc in ('J', 'D'):
         return 2
     return 1
 
 
 def count_parameter_registers(method: SmaliMethod) -> int:
-    """
-    Número total de registros ocupados por los parámetros,
-    incluyendo 'this' si el método NO es static.
-    """
     total = 0
     if not method.is_static():
-        total += 1  # this
+        total += 1
     for p in method.parameters:
         total += _type_size(p)
     return total
 
 
 def _normalize_reg(reg: str, method: SmaliMethod) -> str:
-    """
-    Convierte un registro escrito como 'pN' a su equivalente 'vX'.
-    Si ya es 'vN', lo devuelve tal cual.
-    """
     reg = reg.strip()
     if reg.startswith('v') and reg[1:].isdigit():
         return reg
@@ -179,7 +173,6 @@ def _normalize_reg(reg: str, method: SmaliMethod) -> str:
 
 
 def _param_register_set(method: SmaliMethod) -> set:
-    """Conjunto de nombres 'vX' ocupados por parámetros (incluye 'this')."""
     n = method.registers
     n_params = count_parameter_registers(method)
     start = n - n_params
@@ -188,14 +181,6 @@ def _param_register_set(method: SmaliMethod) -> set:
 
 def find_free_registers(method: SmaliMethod, return_reg=None, need=2,
                         prefer_high=False):
-    """
-    Devuelve una lista de `need` nombres 'vX' que son seguros como temporales.
-    - No son parámetros (ni 'this').
-    - No incluyen `return_reg` (si se especifica).
-    - No incluyen registros que estén ocupados por el segundo registro de un wide.
-
-    Devuelve None si no hay suficientes (habría que expandir .registers).
-    """
     n = method.registers
     n_params = count_parameter_registers(method)
     param_start = n - n_params
@@ -204,7 +189,6 @@ def find_free_registers(method: SmaliMethod, return_reg=None, need=2,
     if return_reg:
         forbidden.add(_normalize_reg(return_reg, method))
 
-    # Zona no-param: v0 .. v(param_start - 1)
     candidates = [f"v{i}" for i in range(param_start)]
     if prefer_high:
         candidates.reverse()
@@ -216,29 +200,15 @@ def find_free_registers(method: SmaliMethod, return_reg=None, need=2,
 
 
 def auto_expand_registers(method: SmaliMethod, need_extra: int) -> int:
-    """
-    Devuelve el nuevo valor de .registers necesario para tener al menos
-    `need_extra` registros NO-param libres.
-    """
     n = method.registers
     n_params = count_parameter_registers(method)
-    available = n - n_params  # registros no-param actuales
+    available = n - n_params
     if available >= need_extra:
         return n
     return n + (need_extra - available)
 
 
 def plan_hook_registers(method: SmaliMethod, need=2, return_reg=None):
-    """
-    Decide cuántos registros usar y si hay que expandir .registers.
-
-    Devuelve:
-      {
-        'expand_to': int | None,   # nuevo .registers, o None si no hace falta
-        'temps':    ['vX', ...],   # registros seguros a usar
-        'forbidden': set,          # registros que NO se pueden tocar
-      }
-    """
     temps = find_free_registers(method, return_reg=return_reg, need=need)
     if temps:
         return {
@@ -249,7 +219,6 @@ def plan_hook_registers(method: SmaliMethod, need=2, return_reg=None):
             ),
         }
 
-    # No hay suficientes: expandimos
     new_n = auto_expand_registers(method, need_extra=need)
     saved = method.registers
     method.registers = new_n
@@ -277,9 +246,6 @@ def indent(code, spaces=4):
 
 
 def generate_hook_enter(func_name, arg_name, arg_register, temps, indent_spaces=4):
-    """
-    `temps` debe tener al menos 3 registros: [name_reg, argname_reg, value_reg]
-    """
     t_name, t_argname, t_val = temps[0], temps[1], temps[2]
     return indent(f"""
 # ========== HOOK ENTER ==========
@@ -292,14 +258,9 @@ invoke-static {{{t_name}, {t_argname}, {t_val}}}, {REMOTE_LOGGER_CLASS}->hookEnt
 
 
 def generate_hook_exit(func_name, return_reg, return_line, temps, indent_spaces=4):
-    """
-    `temps` debe tener al menos 2 registros.
-    NO toca `return_reg` (el registro que contiene el valor a devolver).
-    """
     t_name, t_val = temps[0], temps[1]
 
     if return_line is None or return_line == 'return-void':
-        # No hay valor de retorno: usamos 2 temporales como (tag, mensaje)
         return indent(f"""
 # ========== HOOK EXIT (void) ==========
 const-string {t_name}, "{func_name}"
@@ -318,7 +279,6 @@ invoke-static {{{t_name}, {t_val}}}, {REMOTE_LOGGER_CLASS}->hookExit(Ljava/lang/
 """.strip(), indent_spaces)
 
     if return_line.startswith('return-wide'):
-        # Long/Double → boxear con Long.valueOf(J) (2 registros)
         return indent(f"""
 # ========== HOOK EXIT (wide) ==========
 const-string {t_name}, "{func_name}"
@@ -328,7 +288,6 @@ invoke-static {{{t_name}, {t_val}}}, {REMOTE_LOGGER_CLASS}->hookExit(Ljava/lang/
 # ======================================
 """.strip(), indent_spaces)
 
-    # return (int, boolean, float boxeado como Integer)
     return indent(f"""
 # ========== HOOK EXIT (primitive) ==========
 const-string {t_name}, "{func_name}"
@@ -361,8 +320,7 @@ class HookInjector:
         self.lines = None
         self.methods = []
         self.target_method = None
-        # Ajustes planificados que se aplicarán al guardar
-        self.pending_registers = None   # nuevo valor de .registers (o None)
+        self.pending_registers = None
 
     def load(self):
         if not self.file_path.exists():
@@ -380,8 +338,6 @@ class HookInjector:
             return False
         return True
 
-    # ---------- helpers de línea ----------
-
     def _find_registers_line(self):
         m = self.target_method
         for i in range(m.start_line, m.end_line):
@@ -396,16 +352,11 @@ class HookInjector:
         return None
 
     def _apply_register_plan(self, plan):
-        """
-        Registra el nuevo valor de .registers si hace falta.
-        Se aplicará físicamente en save().
-        """
         if plan['expand_to'] is not None:
             self.pending_registers = plan['expand_to']
             log_info(f"Registros se expandirán a: {plan['expand_to']}")
 
     def _write_registers_to_lines(self):
-        """Aplica self.pending_registers a la línea .registers/.locals."""
         if self.pending_registers is None:
             return
         idx = self._find_registers_line()
@@ -420,12 +371,8 @@ class HookInjector:
         self.target_method.registers = self.pending_registers
         log_info(f"Registros aplicados: {old} → {self.pending_registers}")
 
-    # ---------- inyección ----------
-
     def inject_enter(self):
         m = self.target_method
-
-        # Determinar registro del 'this' o del primer parámetro
         if m.is_static():
             if not m.parameters:
                 log_warn("Método static sin parámetros: hook enter sin valor")
@@ -435,7 +382,6 @@ class HookInjector:
         else:
             arg_register = _normalize_reg("p0", m)
 
-        # Planificamos 3 temporales (no tocamos p0)
         plan = plan_hook_registers(m, need=3, return_reg=arg_register)
         self._apply_register_plan(plan)
         temps = plan['temps']
@@ -474,12 +420,6 @@ class HookInjector:
             log_warn(f"No se encontraron returns en {m.name}")
             return False
 
-        # Primera pasada: planificamos según el PRIMER return para tener un
-        # registro seguro global (aplicamos una sola expansión).
-        #
-        # Elegimos como need el caso más exigente: wide = 2 temporales
-        # (porque los wide se pueden boxear sin temporales extra si el
-        #  return_reg está en el par correcto).
         first_line = self.lines[return_indices[0]].strip()
         first_reg_match = re.search(r'return-\S+\s+(\S+)', first_line)
         first_reg = first_reg_match.group(1) if first_reg_match else None
@@ -488,8 +428,6 @@ class HookInjector:
         self._apply_register_plan(plan)
         temps = plan['temps']
 
-        # Segunda pasada: inyectamos en cada return, de abajo hacia arriba
-        # para no descolocar los índices.
         for idx in reversed(return_indices):
             line = self.lines[idx].strip()
 
@@ -502,21 +440,12 @@ class HookInjector:
             match = re.search(r'return-(\S+)\s+(\S+)', line)
             if not match:
                 continue
-            kind = match.group(1)            # object, wide, (vacío)
-            reg = match.group(2)             # vX o pX
+            kind = match.group(1)
+            reg = match.group(2)
 
-            # El registro del return puede ser pX → normalizar
             reg_norm = _normalize_reg(reg, m)
 
-            # Si el registro del return choca con un temporal, lo movemos
-            # a un registro seguro (uno de los temporales NO usados como name).
-            # En la práctica: pedimos 3 temporales y usamos el 3º como destino.
-            #
-            # Para simplificar: usamos 2 temporales para name/value. Si el
-            # return_reg está entre los temporales elegidos, movemos el
-            # resultado a un temporal adicional antes del hook.
             if reg_norm in temps:
-                # Pedimos un tercer temporal para custodiar el valor
                 plan3 = plan_hook_registers(m, need=3, return_reg=reg_norm)
                 self._apply_register_plan(plan3)
                 extra = plan3['temps'][2]
@@ -552,11 +481,10 @@ class HookInjector:
         self.lines.insert(reg_line_idx + 1, f"    # Log D inyectado - {datetime.now().isoformat()}")
         self.lines.insert(reg_line_idx + 1, log_code)
 
-        log_ok(f"Log d(\"{tag}\", \"{message}\") inyectado en {m.name} usando {temps}")
+        log_ok(f'Log d("{tag}", "{message}") inyectado en {m.name} usando {temps}')
         return True
 
     def save(self, backup=True):
-        # Aplicar el cambio de .registers pendiente ANTES de escribir
         self._write_registers_to_lines()
 
         if backup:
@@ -591,7 +519,6 @@ def analyze_method(method: SmaliMethod):
             size = _type_size(p)
             print(f"    p{i} : {p}  ({size} reg)")
 
-    # Zona no-param
     free = find_free_registers(method, need=1)
     if free is None:
         print(f"  {Color.YELLOW}No hay registros no-param libres.{Color.RESET}")
@@ -604,22 +531,24 @@ def analyze_method(method: SmaliMethod):
 
 
 # ============================================================
-# MAIN
+# PARSER PROPIO (reutilizable)
 # ============================================================
 
-def main():
+def build_hook_parser(prog: str = "smalilog hook") -> argparse.ArgumentParser:
+    """Construye el parser del subcomando `hook`."""
     parser = argparse.ArgumentParser(
+        prog=prog,
         description="Inyecta hooks de observación en archivos Smali",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos:
-  python3 smali_hook.py archivo.smali --list
-  python3 smali_hook.py archivo.smali --method Sf --analyze
-  python3 smali_hook.py archivo.smali --method Sf --action enter
-  python3 smali_hook.py archivo.smali --method Sf --action exit
-  python3 smali_hook.py archivo.smali --method Sf --action both
-  python3 smali_hook.py archivo.smali --method Sf --action d --tag MiTag --message "Hola"
-        """
+  smalilog hook archivo.smali --list
+  smalilog hook archivo.smali --method Sf --analyze
+  smalilog hook archivo.smali --method Sf --action enter
+  smalilog hook archivo.smali --method Sf --action exit
+  smalilog hook archivo.smali --method Sf --action both
+  smalilog hook archivo.smali --method Sf --action d --tag MiTag --message "Hola"
+        """,
     )
 
     parser.add_argument('file', help='Archivo Smali a procesar')
@@ -628,22 +557,32 @@ Ejemplos:
         '--action', '-a',
         choices=['enter', 'exit', 'both', 'observ', 'analyze', 'd'],
         default='both',
-        help='Acción: enter, exit, both, observ, analyze, d (default: both)'
+        help='Acción: enter, exit, both, observ, analyze, d (default: both)',
     )
     parser.add_argument('--tag', help='Tag para acción "d" (default: LOG)', default='LOG')
-    parser.add_argument('--message', '--msg', help='Mensaje para acción "d"', default='Mensaje de log')
+    parser.add_argument('--message', '--msg', help='Mensaje para acción "d"',
+                        default='Mensaje de log')
     parser.add_argument('--analyze', action='store_true', help='Solo analizar')
     parser.add_argument('--list', '-l', action='store_true', help='Listar métodos')
     parser.add_argument('--no-backup', action='store_true', help='No crear backup')
     parser.add_argument('--output', '-o', help='Archivo de salida')
 
-    args = parser.parse_args()
+    return parser
 
-    log_header("smali_hook.py - Inyector de hooks")
+
+def run_hooker(argv: list[str] | None = None, prog: str = "smalilog hook") -> int:
+    """
+    Ejecuta el inyector. Devuelve 0 en éxito, != 0 en error.
+    Se puede llamar desde tests o desde el CLI principal.
+    """
+    parser = build_hook_parser(prog=prog)
+    args = parser.parse_args(argv)
+
+    log_header("smalilog hook - Inyector de hooks")
 
     injector = HookInjector(args.file, args.method)
     if not injector.load():
-        sys.exit(1)
+        return 1
 
     if args.list:
         log_header(f"Métodos en {args.file}")
@@ -651,15 +590,15 @@ Ejemplos:
             static = "static " if m.is_static() else ""
             print(f"  {Color.GREEN}{m.name}{Color.RESET} {m.signature} "
                   f"({static}{m.registers} regs)")
-        return
+        return 0
 
     if args.analyze or args.action == 'analyze':
         analyze_method(injector.target_method)
-        return
+        return 0
 
     if not args.method:
         log_error("Debes especificar --method")
-        sys.exit(1)
+        return 1
 
     log_info(f"Archivo: {args.file}")
     log_info(f"Método: {args.method}")
@@ -685,11 +624,13 @@ Ejemplos:
         output_path = args.output if args.output else args.file
         injector.file_path = Path(output_path)
         injector.save(backup=not args.no_backup)
-        log_header("✅ INYECCIÓN COMPLETADA")
+        log_header("INYECCIÓN COMPLETADA")
+        return 0
     else:
         log_error("No se pudo completar la inyección")
-        sys.exit(1)
+        return 1
 
 
+# Compatibilidad: permite `python -m smalilog.injector.hooker ...`
 if __name__ == '__main__':
-    main()
+    sys.exit(run_hooker())
