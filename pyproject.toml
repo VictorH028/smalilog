@@ -13,3 +13,43 @@ dependencies = []
 [project.scripts]
 smalilog = "smalilog.main:cli"
 
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+preview = true
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "ISC",  # implicit-str-concat
+    "PIE",  # flake8-pie
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TRY",  # tryceratops
+    "ARG",  # flake8-unused-arguments
+    "PLW",  # pylint warnings
+    "PLR",  # pylint refactor
+]
+ignore = [
+    "PLR0912",  # too many branches
+    "PLR0915",  # too many statements
+    "PLR2004",  # magic value used in comparison
+    "ARG002",   # unused method argument (framework callbacks)
+    "TRY003",   # long messages outside exception class
+    "TRY300",   # consider moving to else
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Las plantillas Smali generan líneas largas inevitables
+"src/smalilog/injector/hooker.py" = ["E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
