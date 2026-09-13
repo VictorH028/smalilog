@@ -1,0 +1,2 @@
+[console_scripts]
+smalilog = smalilog.main:cli

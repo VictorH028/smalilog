@@ -1,3 +1,10 @@
+Metadata-Version: 2.4
+Name: smalilog
+Version: 0.1.0
+Summary: Herramienta CLI para inyección Smali y registro remoto
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+
 
 ![banner](./.img/pre.png) 
 

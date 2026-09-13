@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/smalilog/__init__.py
+src/smalilog/config.py
+src/smalilog/main.py
+src/smalilog.egg-info/PKG-INFO
+src/smalilog.egg-info/SOURCES.txt
+src/smalilog.egg-info/dependency_links.txt
+src/smalilog.egg-info/entry_points.txt
+src/smalilog.egg-info/top_level.txt
+src/smalilog/android/__init__.py
+src/smalilog/injector/__init__.py
+src/smalilog/injector/hooker.py
+src/smalilog/server/__init__.py
+src/smalilog/server/logserver.py
+src/smalilog/utils/__init__.py
