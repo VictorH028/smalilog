@@ -12,7 +12,8 @@ from ._emit import _regnum
 from ._highlight import highlight_line
 from ._smali_model import SmaliMethod, normalize_reg
 from ._smali_parser import parse_class_name, parse_smali_file
-
+from ._smali_types import is_reference
+from ._register_planner import plan_hook_registers
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -209,47 +210,67 @@ class HookInjector:
         return True
 
     # ---------- inyección ----------
-
     def inject_enter(self) -> bool:
         m = self.target
         if self._body_contains(self.MARKER_ENTER):
             log_warn(f"Hook ENTER ya presente en {m.name}; se omite")
             return True
 
-        if m.is_static():
-            if m.parameters:
-                arg_name, arg_desc, arg_sym = "arg0", m.parameters[0], "p0"
-            else:
-                arg_name, arg_desc, arg_sym = "null", None, None
+        # 1. SELECCIÓN DEL ARGUMENTO
+        if m.parameters:
+            arg_name = "arg0"
+            arg_desc = m.parameters[0]
+            # En instancia p1 es el 1er parámetro (p0 es this). En static es p0.
+            arg_sym = "p0" if m.is_static() else "p1"
         else:
-            arg_name = "this"
-            arg_desc = self.class_name or "Ljava/lang/Object;"
-            arg_sym = "p0"
+            if m.is_static():
+                arg_name = "null"
+                arg_desc = None
+                arg_sym = None
+            else:
+                arg_name = "this"
+                arg_desc = self.class_name or "Ljava/lang/Object;"
+                arg_sym = "p0"
 
-        temps = self._plan(need=3)
-        if temps is None:
-            return False
+        # 2. PLANIFICACIÓN DE REGISTROS
+        needs_boxing = (arg_desc is None) or (not is_reference(arg_desc))
+        needed_temps = 3 if needs_boxing else 2
 
-        arg_reg = normalize_reg(arg_sym, m) if arg_sym else None
+        # Usar el planner
+        plan = plan_hook_registers(m, need=needed_temps)
+        temps = plan["temps"]
+        
+        # Obtener el nuevo total (se adapta si la clave es 'new_registers', 'total' o mediante el cálculo)
+        new_total = plan.get("new_total") or plan.get("new_registers") or (m.registers_value + needed_temps)
+
+        # 3. APLICAR DIRECTIVA Y REALIZAR INYECCIÓN
+        if hasattr(self, "_set_pending_registers"):
+            self._set_pending_registers(new_total)
+        else:
+            self.pending_registers = new_total
 
         idx = self._find_registers_line()
         if idx is None:
             idx = m.start_line
-            self.lines.insert(idx + 1,
-                              f"    .registers {self.pending_registers}")
+            self.lines.insert(idx + 1, f"    .registers {new_total}")
             idx += 1
 
         block = [
             f"    # {self.MARKER_ENTER} - {_utc_now_iso()}",
             generate_hook_enter(self._method_id(), arg_name,
-                                arg_desc, arg_reg, temps,
+                                arg_desc, arg_sym, temps,
                                 self.remote_logger_class),
             "",
         ]
         self.lines[idx + 1:idx + 1] = block
 
-        log_ok(f"Hook ENTER inyectado en {m.name} (temps: {temps})")
+        if hasattr(self, "_write_registers_to_lines"):
+            self._write_registers_to_lines()
+
+        log_ok(f"Hook ENTER inyectado en {m.name} (temps: {temps}, arg: {arg_sym})")
         return True
+   
+
 
     def inject_exit(self) -> bool:
         m = self.target

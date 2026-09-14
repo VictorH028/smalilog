@@ -7,28 +7,39 @@ from ._smali_types import is_reference
 
 def generate_hook_enter(func_name, arg_name, arg_desc, arg_register, temps,
                         remote_logger_class: str):
-    t_name, t_argname, t_val = temps
+    # Asumimos que `temps` trae al menos 2 temporales frescos para los strings.
+    # Si requiere autoboxing de primitivos o null, usará el 3er temporal temps[2].
+    t_name, t_argname = temps[0], temps[1]
+
     lines = [
         "# ========== HOOK ENTER ==========",
         f'const-string {t_name}, "{func_name}"',
         f'const-string {t_argname}, "{arg_name}"',
     ]
+
     if arg_desc is None:
+        # Sin argumentos: pasar null
+        t_val = temps[2]
         lines.append(const_null(t_val))
+        target_reg = t_val
     elif is_reference(arg_desc):
-        lines.append(move_object(t_val, arg_register))
+        # Objeto/Referencia: pasar el registro original (ej. p0) directamente
+        target_reg = arg_register
     else:
+        # Tipo primitivo (int, boolean, etc.): requiere boxing hacia el 3er temporal
+        t_val = temps[2]
         lines += box_scalar(arg_desc, arg_register, t_val)
+        target_reg = t_val
+
     lines += [
         invoke_static(
-            [t_name, t_argname, t_val],
+            [t_name, t_argname, target_reg],
             f"{remote_logger_class}->hookEnter("
             f"Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V",
         ),
         "# ================================",
     ]
     return indent("\n".join(lines))
-
 
 def generate_hook_exit(func_name, return_line, return_reg, temps, ret_type,
                        remote_logger_class: str):
