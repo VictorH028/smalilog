@@ -40,7 +40,6 @@ def generate_hook_enter(func_name, arg_name, arg_desc, arg_register, temps,
         "# ================================",
     ]
     return indent("\n".join(lines))
-
 def generate_hook_exit(func_name, return_line, return_reg, temps, ret_type,
                        remote_logger_class: str):
     t_name, t_val = temps
@@ -51,21 +50,26 @@ def generate_hook_exit(func_name, return_line, return_reg, temps, ret_type,
         f'const-string {t_name}, "{func_name}"',
     ]
 
+    # Caso 1: Retorno Void
     if return_line == "return-void" or return_reg is None:
         body = [f'const-string {t_val}, "void"']
         invoke = invoke_static(
             [t_name, t_val],
             f"{remote_logger_class}->d(Ljava/lang/String;Ljava/lang/String;)V",
         )
-        return indent("\n".join(head + body + [invoke,
-                                               "# ================================"]))
+        return indent("\n".join(head + body + [invoke, "# ================================"]))
 
+    # Caso 2: Objeto / Referencia
     if return_line.startswith("return-object"):
         body = [move_object(t_val, return_reg)]
+        
+    # Caso 3: Primitivos Wide (double, long)
     elif return_line.startswith("return-wide"):
         body = box_scalar("D" if ret_type == "D" else "J", return_reg, t_val)
+        
+    # Caso 4: Primitivos Escalares (int, boolean, byte, char, float, short)
     else:
-        body = box_scalar("F" if ret_type == "F" else "I", return_reg, t_val)
+        body = box_scalar(ret_type if ret_type in ("F", "Z", "B", "C", "S") else "I", return_reg, t_val)
 
     return indent("\n".join(head + body + [
         invoke_static([t_name, t_val], target),

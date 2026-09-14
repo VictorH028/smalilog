@@ -7,13 +7,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ._codegen import generate_d_log, generate_hook_enter, generate_hook_exit
-from ._colors import Color, _c, log_error, log_info, log_ok, log_warn
+from ._colors import Color, log_error, log_info, log_ok, log_warn
 from ._emit import _regnum
 from ._highlight import highlight_line
+from ._register_planner import plan_hook_registers
 from ._smali_model import SmaliMethod, normalize_reg
 from ._smali_parser import parse_class_name, parse_smali_file
 from ._smali_types import is_reference
-from ._register_planner import plan_hook_registers
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -33,7 +34,6 @@ class HookInjector:
         self.class_name: str | None = None
         self.target: SmaliMethod | None = None
         self.pending_registers: int | None = None
-        self._plan_base: int | None = None
 
     # ---------- carga ----------
 
@@ -49,7 +49,6 @@ class HookInjector:
     def resolve_method(self, name: str, signature: str | None = None) -> bool:
         self.target = None
         self.pending_registers = None
-        self._plan_base = None
 
         cands = [m for m in self.methods if m.name == name]
         if signature:
@@ -101,29 +100,27 @@ class HookInjector:
         cls = self.class_name or "LUnknown;"
         return f"{cls}->{m.name}{m.signature}"
 
-    # ---------- planificación ----------
+    # ---------- planificación centralizada ----------
 
-    def _plan(self, need: int) -> list[str] | None:
+    def _apply_plan(self, need: int) -> list[str] | None:
+        """Aplica la planificación de registros universal usando _register_planner.py"""
         m = self.target
-        if self._plan_base is None:
-            self._plan_base = m.total_regs
+        plan = plan_hook_registers(m, need=need)
+        temps = plan["temps"]
 
-        temps = [f"v{self._plan_base + k}" for k in range(need)]
         if max(_regnum(t) for t in temps) > 255:
-            log_error("Método demasiado grande (>255 regs): const-string y "
-                      "move-result no soportan índices mayores")
+            log_error("Método demasiado grande (>255 regs): no se pueden inyectar hooks")
             return None
 
-        new_total = self._plan_base + need
+        # Guardamos el total acumulado necesario para este método
+        new_total = plan["new_total_regs"]
         if self.pending_registers is None or new_total > self.pending_registers:
             self.pending_registers = new_total
 
-        m.directive = "registers"
-        m.registers_value = self.pending_registers
         return temps
 
     def _write_registers_to_lines(self) -> None:
-        if self.pending_registers is None:
+        if self.pending_registers is None or self.target is None:
             return
         idx = self._find_registers_line()
         if idx is None:
@@ -157,8 +154,6 @@ class HookInjector:
         end = self._find_end_method_line(m)
         if end is None:
             end = m.end_line
-        if not m.has_body:
-            log_warn("El método no tiene cuerpo (abstract/native)")
 
         body = self.lines[m.start_line:end + 1]
         first_num = m.start_line + 1
@@ -170,8 +165,7 @@ class HookInjector:
         print(C(Color.BOLD, f"{cls}->")
               + C(Color.BOLD + Color.YELLOW, f"{m.name}{m.signature}"))
         info = (f".{m.directive} {m.registers_value}"
-                + (f"  (total {m.total_regs})"
-                   if m.directive == "locals" else "")
+                + (f"  (total {m.total_regs})" if m.directive == "locals" else "")
                 + f"  ·  {'static' if m.is_static() else 'instance'}"
                 + f"  ·  {len(m.parameters)} params"
                 + f"  ·  {len(body)} líneas")
@@ -186,23 +180,15 @@ class HookInjector:
             if s.startswith("#") and "inyectado" in s:
                 in_hook = True
 
-            if in_hook:
-                gutter = C(Color.GREEN, "+")
-            else:
-                gutter = C(Color.DIM, "│") if color else "|"
-
-            if line_numbers:
-                prefix = f"{C(Color.DIM, f'{num:>{width}}')} {gutter} "
-            else:
-                prefix = f"{gutter} "
+            gutter = C(Color.GREEN, "+") if in_hook else (C(Color.DIM, "│") if color else "|")
+            prefix = f"{C(Color.DIM, f'{num:>{width}}')} {gutter} " if line_numbers else f"{gutter} "
 
             print(prefix + highlight_line(raw, color=color, style=style))
 
             if in_hook and re.fullmatch(r"#\s*=+\s*", s):
                 in_hook = False
 
-        hooks = sum(1 for r in body
-                    if r.strip().startswith("#") and "inyectado" in r)
+        hooks = sum(1 for r in body if r.strip().startswith("#") and "inyectado" in r)
         if hooks:
             print(C(Color.DIM, "─" * 72))
             print(C(Color.GREEN, f"  ▸ {hooks} bloque(s) inyectado(s)"))
@@ -210,17 +196,16 @@ class HookInjector:
         return True
 
     # ---------- inyección ----------
+
     def inject_enter(self) -> bool:
         m = self.target
         if self._body_contains(self.MARKER_ENTER):
             log_warn(f"Hook ENTER ya presente en {m.name}; se omite")
             return True
 
-        # 1. SELECCIÓN DEL ARGUMENTO
         if m.parameters:
             arg_name = "arg0"
             arg_desc = m.parameters[0]
-            # En instancia p1 es el 1er parámetro (p0 es this). En static es p0.
             arg_sym = "p0" if m.is_static() else "p1"
         else:
             if m.is_static():
@@ -232,28 +217,16 @@ class HookInjector:
                 arg_desc = self.class_name or "Ljava/lang/Object;"
                 arg_sym = "p0"
 
-        # 2. PLANIFICACIÓN DE REGISTROS
         needs_boxing = (arg_desc is None) or (not is_reference(arg_desc))
         needed_temps = 3 if needs_boxing else 2
 
-        # Usar el planner
-        plan = plan_hook_registers(m, need=needed_temps)
-        temps = plan["temps"]
-        
-        # Obtener el nuevo total (se adapta si la clave es 'new_registers', 'total' o mediante el cálculo)
-        new_total = plan.get("new_total") or plan.get("new_registers") or (m.registers_value + needed_temps)
-
-        # 3. APLICAR DIRECTIVA Y REALIZAR INYECCIÓN
-        if hasattr(self, "_set_pending_registers"):
-            self._set_pending_registers(new_total)
-        else:
-            self.pending_registers = new_total
+        temps = self._apply_plan(need=needed_temps)
+        if temps is None:
+            return False
 
         idx = self._find_registers_line()
         if idx is None:
             idx = m.start_line
-            self.lines.insert(idx + 1, f"    .registers {new_total}")
-            idx += 1
 
         block = [
             f"    # {self.MARKER_ENTER} - {_utc_now_iso()}",
@@ -263,14 +236,10 @@ class HookInjector:
             "",
         ]
         self.lines[idx + 1:idx + 1] = block
-
-        if hasattr(self, "_write_registers_to_lines"):
-            self._write_registers_to_lines()
+        self._write_registers_to_lines()
 
         log_ok(f"Hook ENTER inyectado en {m.name} (temps: {temps}, arg: {arg_sym})")
         return True
-   
-
 
     def inject_exit(self) -> bool:
         m = self.target
@@ -292,9 +261,14 @@ class HookInjector:
             log_warn(f"No se encontraron returns en {m.name}")
             return False
 
-        temps = self._plan(need=2)
+        # 1. PLANIFICAR Y APLICAR REGISTROS DE INMEDIATO EN EL MODELO
+        temps = self._apply_plan(need=2)
         if temps is None:
             return False
+
+        # Actualizar el modelo del método ANTES de evaluar normalizaciones de pX -> vY
+        m.directive = "registers"
+        m.registers_value = self.pending_registers
 
         count = 0
         for idx in reversed(ret_indices):
@@ -312,16 +286,21 @@ class HookInjector:
             if not mt:
                 log_warn(f"Return no reconocido, se omite: '{line}'")
                 continue
+            
             kind = mt.group(1) or ""
-            reg = normalize_reg(mt.group(2), m)
+            raw_reg = mt.group(2)
+
+            # 2. RESOLVER REGISTRO TARGET (Si era p0, con m.registers_value ya actualizado, devuelve el vY real)
+            reg = normalize_reg(raw_reg, m)
+
             code = generate_hook_exit(self._method_id(), "return" + kind,
                                       reg, temps, m.return_type,
                                       self.remote_logger_class)
             self.lines[idx:idx] = ["", code]
             count += 1
 
-        log_ok(f"Hook EXIT inyectado en {m.name} "
-               f"({count} returns, temps: {temps})")
+        self._write_registers_to_lines()
+        log_ok(f"Hook EXIT inyectado en {m.name} ({count} returns, temps: {temps})")
         return True
 
     def inject_d(self, tag: str, message: str) -> bool:
@@ -330,16 +309,13 @@ class HookInjector:
             log_warn(f"Log D ya presente en {m.name}; se omite")
             return True
 
-        temps = self._plan(need=2)
+        temps = self._apply_plan(need=2)
         if temps is None:
             return False
 
         idx = self._find_registers_line()
         if idx is None:
             idx = m.start_line
-            self.lines.insert(idx + 1,
-                              f"    .registers {self.pending_registers}")
-            idx += 1
 
         block = [
             f"    # {self.MARKER_D} - {_utc_now_iso()}",
@@ -347,9 +323,9 @@ class HookInjector:
             "",
         ]
         self.lines[idx + 1:idx + 1] = block
+        self._write_registers_to_lines()
 
-        log_ok(f'Log d("{tag}", "{message}") inyectado en {m.name} '
-               f"(temps: {temps})")
+        log_ok(f'Log d("{tag}", "{message}") inyectado en {m.name} (temps: {temps})')
         return True
 
     def save(self, output: str | None = None, backup: bool = True) -> None:
@@ -363,3 +339,4 @@ class HookInjector:
 
         out_path.write_text("\n".join(self.lines) + "\n", encoding="utf-8")
         log_ok(f"Archivo guardado: {out_path}")
+
