@@ -10,6 +10,17 @@ src/smalilog.egg-info/entry_points.txt
 src/smalilog.egg-info/top_level.txt
 src/smalilog/android/__init__.py
 src/smalilog/injector/__init__.py
+src/smalilog/injector/_analyze.py
+src/smalilog/injector/_cli.py
+src/smalilog/injector/_codegen.py
+src/smalilog/injector/_colors.py
+src/smalilog/injector/_emit.py
+src/smalilog/injector/_highlight.py
+src/smalilog/injector/_injector.py
+src/smalilog/injector/_register_planner.py
+src/smalilog/injector/_smali_model.py
+src/smalilog/injector/_smali_parser.py
+src/smalilog/injector/_smali_types.py
 src/smalilog/injector/hooker.py
 src/smalilog/server/__init__.py
 src/smalilog/server/logserver.py
