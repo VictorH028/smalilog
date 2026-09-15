@@ -1,15 +1,13 @@
-Aquí tienes una versión del README.md rediseñada con una estética Cyberpunk / High-Tech Futurista.
-Se incorporaron tipografías estilizadas, glifos/íconos cibernéticos, bordes estructurados tipo interfaz terminal de ciencia ficción, badges neón con estilo for-the-badge, cuadros de alerta cyberpunk y diagramas Mermaid con paleta de colores Cyber-Neon (Cyan, Magenta y Matrix Green).
-Puedes copiar y pegar el bloque completo directamente en tu archivo README.md:
 <div align="center">
 
-
+```
 ██████╗ ███╗   ███╗██████╗ ██╗     ██╗██╗      ██████╗  ██████╗
 ██╔════╝ ████╗ ████║██╔══██╗██║     ██║██║     ██╔═══██╗██╔════╝
 ╚█████╗  ██╔████╔██║██████╔╝██║     ██║██║     ██║   ██║██║  ███╗
 ╚═══██╗ ██║╚██╔╝██║██╔═══╝ ██║     ██║██║     ██║   ██║██║   ██║
 ██████╔╝ ██║ ╚═╝ ██║██║     ███████╗██║███████╗╚██████╔╝╚██████╔╝
 ╚═════╝  ╚═╝     ╚═╝╚═╝     ╚══════╝╚═╝╚══════╝ ╚═════╝  ╚═════╝
+```
 
 ### ⚡ [ SYSTEM STATUS: EXPERIMENTAL LOGGING FRAMEWORK ] ⚡
 
@@ -17,54 +15,49 @@ Puedes copiar y pegar el bloque completo directamente en tu archivo README.md:
 
 ---
 
-[![Estado](https://img.shields.io/badge/SYSTEM_STATUS-EXPERIMENTAL-ff0055?style=for-the-badge&logo=android&logoColor=white)](url)
-[![Plataforma](https://img.shields.io/badge/TARGET_OS-ANDROID_%2B_TERMUX-00f0ff?style=for-the-badge&logo=android&logoColor=black)](url)
-[![Arquitectura](https://img.shields.io/badge/ARCH-ARM64_%2F_AArch64-7000ff?style=for-the-badge&logo=cpu&logoColor=white)](url)
-[![Python](https://img.shields.io/badge/ENGINE-PYTHON_3.10%2B-39ff14?style=for-the-badge&logo=python&logoColor=black)](url)
-[![Licencia](https://img.shields.io/badge/LICENSE-AUTHORIZED_USE_ONLY-ffe600?style=for-the-badge&logo=shield&logoColor=black)](url)
-
----
+![Estado](https://img.shields.io/badge/SYSTEM_STATUS-EXPERIMENTAL-ff0055?style=for-the-badge&logo=android&logoColor=white)
+![Plataforma](https://img.shields.io/badge/TARGET_OS-ANDROID_%2B_TERMUX-00f0ff?style=for-the-badge&logo=android&logoColor=black)
+![Arquitectura](https://img.shields.io/badge/ARCH-ARM64_%2F_AArch64-7000ff?style=for-the-badge&logo=cpu&logoColor=white)
+![Python](https://img.shields.io/badge/ENGINE-PYTHON_3.10%2B-39ff14?style=for-the-badge&logo=python&logoColor=black)
+![Licencia](https://img.shields.io/badge/LICENSE-AUTHORIZED_USE_ONLY-ffe600?style=for-the-badge&logo=shield&logoColor=black)
 
 </div>
 
-<br/>
+---
 
+<a id="index"></a>
+## [00] INDEX // TABLA DE CONTENIDOS
 
-================================================================================
-[00] INDEX // TABLA DE CONTENIDOS PROTOCOLIZADA
+- [◈ 01. Visión general](#overview)
+- [◈ 02. Arquitectura de datos](#architecture)
+- [◈ 03. Estructura del proyecto](#filesystem)
+- [◈ 04. Especificaciones de API](#api)
+- [◈ 05. Motor JNI & Reglas Smali](#jni)
+- [◈ 06. Servidor de logs](#server)
+- [◈ 07. Inyector Smali](#injector)
+- [◈ 08. Compilación nativa](#compile)
+- [◈ 09. Integración en APK](#deploy)
+- [◈ 10. Pruebas](#testing)
+- [◈ 11. Roadmap & Estado](#roadmap)
+- [◈ 12. Consideraciones de seguridad](#security)
+- [◈ 13. Contribuir](#contributing)
 
-* [◈ 01. VISIÓN GENERAL](#-01-visión-general--descripción)
-* [◈ 02. ARQUITECTURA DE DATOS](#-02-arquitectura-de-datos)
-* [◈ 03. ESTRUCTURA DE REPOSITORIO](#-03-estructura-del-proyecto)
-* [◈ 04. ESPECIFICACIONES DE API & TIPOS](#-04-especificaciones-de-api)
-* [◈ 05. MOTOR JNI & MATRIZ SMALI](#-05-motor-jni--reglas-smali)
-* [◈ 06. NÚCLEO DE ESCUCHA (SERVER)](#-06-servidor-de-logs)
-* [◈ 07. INYECTOR AUTOMATIZADO](#-07-inyector-smali-injector)
-* [◈ 08. COMPILACIÓN NATIVA AArch64](#-08-compilación-de-la-biblioteca-nativa)
-* [◈ 09. DESPLIEGUE EN TARGET APK](#-09-integración-en-una-apk)
-* [◈ 10. PROTOCOLO DE PRUEBAS](#-10-pruebas)
-* [◈ 11. ROADMAP & ESTADO](#-11-estado-del-proyecto)
-* [◈ 12. PROTOCOLO DE SEGURIDAD](#-12-consideraciones-de-seguridad)
-* [◈ 13. NODO DE CONTRIBUCIÓN](#-13-contribuir)
+---
 
-<br/>
+<a id="overview"></a>
+## [01] VISIÓN GENERAL
 
+`SMALILOG` es un sistema **experimental de telemetría y logging remoto** diseñado para Android Runtime (ART). Permite instrumentar binarios descompilados (`Smali`) para extraer trazas críticas en tiempo real —puntos de entrada/salida, argumentos, tipos y mensajes de runtime— transmitiéndolos vía **C/JNI** hacia un servidor HTTP local.
 
-================================================================================
-[01] OVERVIEW // VISIÓN GENERAL & DESCRIPCIÓN
+Orientado a auditorías de seguridad, *reverse engineering*, depuración dinámica y análisis en entornos **Termux + ARM64**.
 
-`SMALILOG` es un sistema **experimental de telemetría y logging remoto de alto rendimiento** diseñado para entornos Android execution runtime (ART). Permite instrumentar binarios descompilados (`Smali`) para extraer trazas críticas en tiempo real —puntos de entrada/salida de funciones, inspección de argumentos, tipos de datos y mensajes de runtime— transmitiéndolos a través de una librería nativa escrita en **C/JNI** hacia un servidor local HTTP.
+> **Target ABI:** ARM64 / AArch64  
+> **Runtime:** Android OS + Termux
 
-Diseñado específicamente para auditorías de seguridad, *reverse engineering*, depuración dinámica y análisis de código sobre entornos restrictivos **Termux + ARM64**.
+---
 
-> ⚠️ **TARGET ABI:** `ARM64 / AArch64`  
-> ⚠️ **RUNTIME ENVIRONMENT:** `Android OS + Termux Environment`
-
-<br/>
-
-
-================================================================================
-[02] SYSTEM ARCHITECTURE // ARQUITECTURA DE DATOS
+<a id="architecture"></a>
+## [02] ARQUITECTURA DE DATOS
 
 ```mermaid
 flowchart TD
@@ -73,59 +66,109 @@ flowchart TD
     classDef serverStyle fill:#092615,stroke:#39ff14,stroke-width:2px,color:#39ff14;
     classDef nodeStyle fill:#05050a,stroke:#7000ff,color:#fff;
 
-    subgraph BUILD[" 🏗️ STAGE 1: BUILD & INSTRUMENTATION "]
-        S1[📄 Smali Original]:::nodeStyle --> S2[⚡ Injector Engine]:::nodeStyle
-        S2 --> S3[📜 Smali Instrumentado]:::nodeStyle
-        S3 --> S4[📦 Lib Injector Target]:::nodeStyle
+    subgraph BUILD["🏗️ STAGE 1: BUILD & INSTRUMENTATION"]
+        S1[📄 Smali Original] --> S2[⚡ Injector Engine]
+        S2 --> S3[📜 Smali Instrumentado]
+        S3 --> S4[📦 Lib Injector Target]
     end
 
-    subgraph RUNTIME[" ⚙️ STAGE 2: ANDROID RUNTIME CORE "]
-        R1[🧊 Dex Memory]:::nodeStyle --> R2[🔗 JNI Bridge]:::nodeStyle
-        R2 --> R3[⚡ liblogger.so]:::nodeStyle
+    subgraph RUNTIME["⚙️ STAGE 2: ANDROID RUNTIME CORE"]
+        R1[🧊 Dex Memory] --> R2[🔗 JNI Bridge]
+        R2 --> R3[⚡ liblogger.so]
     end
 
-    subgraph SERVER[" 🖥️ STAGE 3: TELEMETRY RECEIVER "]
-        V1[🛰️ Smalilog Server]:::nodeStyle --> V2[💾 Stream Log Output]:::nodeStyle
+    subgraph SERVER["🖥️ STAGE 3: TELEMETRY RECEIVER"]
+        V1[🛰️ Smalilog Server] --> V2[💾 Stream Log Output]
     end
 
     S3 -.->|Signed APK| R1
     R3 ==>|HTTP POST /log| V1
 
+    class S1,S2,S3,S4 nodeStyle;
+    class R1,R2,R3 nodeStyle;
+    class V1,V2 nodeStyle;
     class BUILD buildStyle;
     class RUNTIME runtimeStyle;
     class SERVER serverStyle;
+```
 
-================================================================================
-  [03] FILE SYSTEM // ESTRUCTURA DEL PROYECTO
-================================================================================
+### Secuencia runtime
 
-┌──[ROOT]
-├── 📁 inyector/       ──> Engine de instrumentación y manipulación AST Smali
-├── 📁 server/         ──> Servidor HTTP en Python para captura de eventos
-└── 📁 cli/            ──> Consola de comandos para automatización CLI
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as 📱 Android App
+    participant RL as 🧊 RemoteLogger
+    participant JNI as 🔗 liblogger.so
+    participant Srv as 🛰️ log_server.py
+    participant FS as 💾 app_logs.txt
 
-================================================================================
-  [04] DATA MATRIX // ESPECIFICACIONES DE API & TIPOS
-================================================================================
+    App->>RL: hookEnter("f","a",v)
+    RL->>JNI: native call
+    JNI->>Srv: POST /log {json}
+    Srv->>FS: append line
+    Srv-->>JNI: 200 OK
+    JNI-->>RL: void
+    RL-->>App: void
+```
 
-El motor de serialización soporta la extracción y casteo dinámico de las siguientes estructuras de datos nativas de Java/Android:
-┌─────────────────────────────────────────────────────────┐
-│              SUPPORTED TYPES SPECS                      │
-├────────────────────┬────────────────────┬───────────────┤
-│  [Primitive/Null]  │  [Numeric Objects] │ [Complex Object]│
-├────────────────────┼────────────────────┼───────────────┤
-│  • null            │  • Integer         │ • Object      │
-│  • String          │  • Long            │ • Bundle      │
-│  • Boolean         │  • Double          │               │
-│  │                 │  • Float           │               │
-│  │                 │  • int[]           │               │
-└────────────────────┴────────────────────┴───────────────┘
+---
 
-================================================================================
-  [05] LOW LEVEL BRIDGING // MOTOR JNI & REGLAS SMALI
-================================================================================
+<a id="filesystem"></a>
+## [03] ESTRUCTURA DEL PROYECTO
 
-🧬 Flujo Execution Link JNI
+```text
+.
+├── README.md
+├── MainActivity.java
+├── RemoteLogger.java
+├── native_logger.c
+├── liblogger.so
+├── log_server.py
+├── dex-inj/
+└── injector/
+    ├── __init__.py
+    ├── hooker.py
+    ├── _cli.py
+    ├── _injector.py
+    ├── _codegen.py
+    ├── _emit.py
+    ├── _register_planner.py
+    ├── _smali_model.py
+    ├── _smali_parser.py
+    ├── _smali_types.py
+    ├── _analyze.py
+    ├── _colors.py
+    └── _highlight.py
+```
+
+---
+
+<a id="api"></a>
+## [04] ESPECIFICACIONES DE API
+
+### API Java
+
+```java
+RemoteLogger.d(tag, message);
+RemoteLogger.hookEnter(function, argumentName, value);
+RemoteLogger.hookExit(function, result);
+```
+
+### Tipos soportados
+
+| Categoría | Tipos |
+|---|---|
+| Primitivos / Null | `null`, `String`, `Boolean` |
+| Numéricos | `Integer`, `Long`, `Double`, `Float`, `int[]` |
+| Complejos | `Object`, `Bundle` |
+
+---
+
+<a id="jni"></a>
+## [05] MOTOR JNI & REGLAS SMALI
+
+```mermaid
 flowchart LR
     A[📱 Android App] ==>|Dex Execution| B[🔗 JNI Interface]
     B ==>|Native Call| C[⚡ liblogger.so]
@@ -137,64 +180,78 @@ flowchart LR
     style C fill:#0c0d14,stroke:#ff0055,color:#ff0055
     style D fill:#0c0d14,stroke:#ffe600,color:#ffe600
     style E fill:#0c0d14,stroke:#39ff14,color:#39ff14
+```
 
-El servidor espera un payload estandarizado en formato JSON:
+Payload JSON esperado por el servidor:
+
+```json
 {
     "level": "INFO",
     "tag": "MainActivity",
     "message": "onCreate iniciado"
 }
+```
 
-> 🛡️ POLÍTICA DE BUFFER Y LÍMITES:
-> MAX HEADERS = 16 KiB | MAX BODY SIZE = 1 MiB
-> 
-🧱 Reglas de Inyección en Registros Smali
+> [!NOTE]
+> **Política de buffer:** `MAX_HEADERS = 16 KiB`, `MAX_BODY = 1 MiB`.
+
 > [!IMPORTANT]
-> Los registros utilizados deben alinearse estrictamente con los tipos y firmas reales de la función descompilada original.
-> 
-+-----------------------------------------------------------------------------+
-| FORMULA DE CALCULO DE REGISTROS:                                            |
-|                                                                             |
-|   REGISTROS TOTALES = [REGISTROS ORIGINALES] + [REGISTROS EXTRA PARA HOOKS] |
-|                                                                             |
-| Ejemplo: .registers 2 ---> .registers 6 (cuando se reservan 4 slots libres) |
-+-----------------------------------------------------------------------------+
+> Los registros usados en los hooks deben alinearse estrictamente con los tipos y firmas reales de la función original.
 
- * ⚡ Rango Seguro Temp: Si .registers se incrementa de N_old a N_new, el espacio libre utilizable será v[N_old] .. v[N_new - 1].
- * ⚡ Mapeo de Parámetros (p):
-   * Métodos de Instancia: p0 es reservado para this. Los argumentos de usuario inician en p1.
-   * Métodos Estáticos: Los argumentos inician de forma directa en p0.
- * ⚡ Alias Mappings: Los alias p0, p1, ... conservan su lógica tras recalcular .registers (el ensamblador re-mapea sus offsets).
- * ⚡ Control de Destrucción: Incrementación masiva de registros debe validar la no-sobreescritura de datos vivos.
-================================================================================
-  [06] SERVER CORE // SERVIDOR DE LOGS
-================================================================================
+**Fórmula de cálculo de registros:**
 
-Servidor HTTP de ultra-bajo consumo desarrollado en Python.
-🛠️ Configuración Core Network
+```text
+REGISTROS_TOTALES = REGISTROS_ORIGINALES + REGISTROS_EXTRA_HOOKS
+
+Ejemplo:  .registers 2  →  .registers 6   (4 slots extra)
+```
+
+- **Rango seguro de temporales:** si `.registers` sube de `N_old` a `N_new`, el espacio libre es `v[N_old] .. v[N_new - 1]`.
+- **Mapeo `p`:**
+  - Instancia → `p0` = `this`, argumentos desde `p1`.
+  - Estático → argumentos desde `p0`.
+- **Alias `p0, p1, …`** se re-mapean automáticamente tras recalcular `.registers`.
+- **Control de destrucción:** verificar que no se sobrescriban registros vivos.
+
+---
+
+<a id="server"></a>
+## [06] SERVIDOR DE LOGS
+
+```python
 HOST = "127.0.0.1"
 PORT = 9999
+```
 
 > [!WARNING]
-> La biblioteca binaria .so inyectada está compilada de forma rígida (hardcoded) para comunicarse exclusivamente con este socket loopback.
-> 
-🚀 Despliegue de servicio (Termux / Linux)
-smalilog serve 
+> La librería `.so` está compilada de forma rígida (hardcoded) para hablar con este socket loopback.
 
-Salida de consola esperada:
-[+] SERVER_LISTEN: [http://127.0.0.1:9999](http://127.0.0.1:9999) [READY]
+**Despliegue:**
 
-🧪 Emulación de Petición Telemétrica (Test CLI)
-curl -X POST [http://127.0.0.1:9999/log](http://127.0.0.1:9999/log) \
+```bash
+smalilog serve
+```
+
+Salida esperada:
+
+```text
+[+] SERVER_LISTEN: http://127.0.0.1:9999 [READY]
+```
+
+**Prueba con `curl`:**
+
+```bash
+curl -X POST http://127.0.0.1:9999/log \
      -H 'Content-Type: application/json' \
      -d '{"level":"INFO","tag":"APP","message":"hola"}'
+```
 
-================================================================================
-  [07] AUTOMATED INJECTOR // INYECTOR SMALI (injector/)
-================================================================================
+---
 
-Herramienta para automatizar la inserción de Hooks sobre archivos .smali sin alteración manual del Bytecode.
-💻 Comandos CLI
+<a id="injector"></a>
+## [07] INYECTOR SMALI (`injector/`)
+
+```bash
 smalilog hook list       app.smali
 smalilog hook show       app.smali -m Sf
 smalilog hook analyze    app.smali -m Sf --sig "(I)V"
@@ -202,25 +259,31 @@ smalilog hook enter      app.smali -m Sf
 smalilog hook exit       app.smali -m Sf
 smalilog hook log        app.smali -m Sf --tag APP --message "hola"
 smalilog hook lifecycle  Application.smali -m onCreate
+```
 
-🐍 Integración Programática (Python API)
+**API programática:**
+
+```python
 from smalilog.injector.hooker import run_hooker
 
 run_hooker(["app.smali", "-m", "Sf", "enter"])
+```
 
-┌──[ HIGHLIGHTS DE CAPACIDADES DEL INYECTOR ]
-├── ⚡ Detección automática de sobrecargas (Resolución por --signature).
-├── ⚡ Planificación dinámica de registros libres mediante plan_hook_registers().
-├── ⚡ Preservación estricta de tipos de 64-bit Wide (J, D) al mapear p → v.
-├── ⚡ Manejo adaptativo de contexto Static vs Instance (p0 context awareness).
-├── ⚡ Previene inyecciones duplicadas aplicando marcadores idempotentes.
-└── ⚡ Sombreado de sintaxis opcional vía Pygments (con fallback propio integrador).
+**Capacidades:**
 
-================================================================================
-  [08] NATIVE COMPILATION // COMPILACIÓN NATIVA
-================================================================================
+- ⚡ Detección automática de sobrecargas (`--signature`).
+- ⚡ Planificación dinámica de registros vía `plan_hook_registers()`.
+- ⚡ Preservación estricta de tipos *wide* (`J`, `D`) al mapear `p → v`.
+- ⚡ Manejo adaptativo *static* vs *instance* (`p0` context awareness).
+- ⚡ Marcadores idempotentes anti-doble inyección.
+- ⚡ Resaltado de sintaxis opcional vía **Pygments** (fallback propio).
 
-Para generar la librería compartida orientada a la arquitectura ARM64 (AArch64):
+---
+
+<a id="compile"></a>
+## [08] COMPILACIÓN NATIVA (AArch64)
+
+```bash
 aarch64-linux-android-clang \
     -shared \
     -fPIC \
@@ -231,22 +294,30 @@ aarch64-linux-android-clang \
     native_logger.c \
     -I/usr/lib/jvm/java-8-openjdk-amd64/include \
     -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
+```
 
-Artifact resultante: liblogger.so
-🔍 Auditoría de Dependencias Dinámicas
+**Auditoría de dependencias:**
+
+```bash
 readelf -d liblogger.so | grep NEEDED
+```
 
-Verificación de firmas limpia:
+Salida esperada:
+
+```text
 0x0000000000000001 (NEEDED) Shared library: [libdl.so]
 0x0000000000000001 (NEEDED) Shared library: [libc.so]
+```
 
 > [!CAUTION]
-> Si detectas librerías adicionales en la salida de readelf, la toolchain ha introducido enlaces no deseados que podrían romper la portabilidad en el APK.
-> 
-================================================================================
-  [09] TARGET DEPLOYMENT // INTEGRACIÓN EN UNA APK
-================================================================================
+> Dependencias adicionales indican enlaces no deseados que podrían romper la portabilidad del APK.
 
+---
+
+<a id="deploy"></a>
+## [09] INTEGRACIÓN EN UNA APK
+
+```mermaid
 flowchart LR
     A[1. Inyectar Dex] --> B[2. Copiar liblogger.so]
     B --> C[3. Check Integración]
@@ -258,73 +329,86 @@ flowchart LR
 
     style A fill:#0d0f18,stroke:#00f0ff,color:#00f0ff
     style H fill:#092615,stroke:#39ff14,color:#39ff14
+```
 
-La biblioteca nativa compilada debe alojarse obligatoriamente en la ruta ABI correspondiente:
-📂 Target APK Base Structure
- └── 📁 lib/
-      └── 📁 arm64-v8a/
-           └── 📄 liblogger.so
+Estructura ABI objetivo:
 
-================================================================================
-  [10] TESTING & VERIFICATION // PRUEBAS DE CAMPO
-================================================================================
+```text
+lib/
+└── arm64-v8a/
+    └── liblogger.so
+```
 
-Se provee un módulo MainActivity de pruebas para validar:
- * 🟢 Inicialización de componentes RemoteLogger
- * 🟢 Generación de trazado simple de depuración (d)
- * 🟢 Ejecución limpia de hookEnter / hookExit
- * 🟢 Extracción correcta de múltiples tipos Java
- * 🟢 Captura del Ciclo de Vida (Activity Lifecycle)
- * 🟢 Comunicación end-to-end con el Socket del Servidor
-Puntos de emisión verificados por defecto:
-  [+] Event Hook :: onCreate
-  [+] Event Hook :: onResume
-  [+] Event Hook :: onPause
+---
 
-================================================================================
-  [11] ROADMAP & STATUS // ESTADO DEL PROYECTO
-================================================================================
+<a id="testing"></a>
+## [10] PRUEBAS
 
+`MainActivity` valida:
+
+- 🟢 Inicialización de `RemoteLogger`
+- 🟢 Trazas simples (`d`)
+- 🟢 `hookEnter` / `hookExit`
+- 🟢 Extracción multi-tipo Java
+- 🟢 Ciclo de vida (`onCreate`, `onResume`, `onPause`)
+- 🟢 Comunicación end-to-end con el servidor
+
+---
+
+<a id="roadmap"></a>
+## [11] ROADMAP & ESTADO
+
+```text
 STATUS METRIC: [████████░░] 80% — Experimental / WIP
+```
 
-✅ MÓDULOS IMPLEMENTADOS
- * [x] API Java Nativa (d, hookEnter, hookExit)
- * [x] Motor Logging por Niveles (DEBUG, INFO, WARN, ERROR)
- * [x] Puente JNI de bajo nivel (native_logger.c)
- * [x] Binario dinámico liblogger.so (ARM64)
- * [x] Receiver Server en Python (LogServer)
- * [x] Parsing y validación básica HTTP Body/Headers
- * [x] Engine Automático de Inyección Smali (injector/)
- * [x] Soporte multi-tipo de estructuras Java
-🚧 MÓDULOS EN DESARROLLO (WIP)
- * [ ] Interfaz Web Dashboard de monitoreo en tiempo real
- * [ ] Refactor de protocolo a WebSockets / TLS
- * [ ] Instrumentación Smali 100% Zero-Touch (Automatización Total)
- * [ ] Motor de filtros por TAG, expresiones regulares y severidad
- * [ ] Timestamps precisos sincronizados desde el cliente (Device Side)
- * [ ] Cobertura de tests unitarios e integración
- * [ ] Smali API Complete Reference Guide
-================================================================================
-  [12] SAFETY & SECURITY // CONSIDERACIONES DE SEGURIDAD
-================================================================================
+### ✅ Implementado
+
+- [x] API Java (`d`, `hookEnter`, `hookExit`)
+- [x] Logging por niveles (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- [x] Puente JNI (`native_logger.c`)
+- [x] Binario `liblogger.so` (ARM64)
+- [x] Receiver Server en Python
+- [x] Parsing y validación HTTP
+- [x] Engine de inyección Smali
+- [x] Soporte multi-tipo
+
+### 🚧 En desarrollo
+
+- [ ] Dashboard web de monitoreo
+- [ ] Refactor a WebSockets / TLS
+- [ ] Instrumentación Smali *zero-touch*
+- [ ] Motor de filtros por TAG / regex / severidad
+- [ ] Timestamps sincronizados desde cliente
+- [ ] Tests unitarios e integración
+- [ ] Smali API Complete Reference Guide
+
+---
+
+<a id="security"></a>
+## [12] CONSIDERACIONES DE SEGURIDAD
 
 > [!WARNING]
-> DECLARACIÓN DE USO ÉTICO Y LEGAL:
-> Este framework ha sido diseñado únicamente para propósitos de investigación, auditorías de seguridad, depuración dinámica y análisis de software bajo expresa autorización.
-> Queda estrictamente prohibido su uso para exfiltración no autorizada de datos, análisis malicioso o interceptación de información en dispositivos sin consentimiento previo.
-> ÁMBITO DE RED: El servidor local escucha por defecto en el adaptador 127.0.0.1 (loopback) y no está acondicionado para entornos de producción.
-> 
-================================================================================
-  [13] CONTRIBUTIONS // NODO DE CONTRIBUCIÓN
-================================================================================
+> **Declaración de uso ético y legal**
+>
+> Este framework ha sido diseñado únicamente para investigación, auditorías de seguridad, depuración dinámica y análisis de software **bajo autorización expresa**.
+>
+> Queda estrictamente prohibido su uso para exfiltración no autorizada, análisis malicioso o interceptación en dispositivos sin consentimiento.
+>
+> **Ámbito de red:** el servidor escucha por defecto en `127.0.0.1` (loopback) y **no** está preparado para producción.
 
-¿Quieres contribuir al desarrollo de SMALILOG? Las Pull Requests son bien recibidas. Revisa las tareas pendientes en el Roadmap antes de enviar propuestas.
+---
+
+<a id="contributing"></a>
+## [13] CONTRIBUIR
+
+Las Pull Requests son bienvenidas. Revisa el [roadmap](#roadmap) antes de enviar propuestas.
+
+---
+
 <div align="center">
- ╔═════════════════════════════════════════════════════════════════════════╗
- ║  Coded with ☕ and low-level readelf analysis                           ║
- ║  REMOTE LOGGER FRAMEWORK // EXPERIMENTAL EDITION                        ║
- ╚═════════════════════════════════════════════════════════════════════════╝
+
+**Coded with ☕ and low-level `readelf` analysis**  
+`REMOTE LOGGER FRAMEWORK // EXPERIMENTAL EDITION`
 
 </div>
-
-
