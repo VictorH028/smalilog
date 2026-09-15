@@ -74,6 +74,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+
+
         RemoteLogger.d("Lifecycle", "onResume");
         RemoteLogger.hookEnter("onResume", "state", "resumed");
         RemoteLogger.hookExit("onResume", "ok");
