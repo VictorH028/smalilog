@@ -302,32 +302,7 @@ class HookInjector:
         self._write_registers_to_lines()
         log_ok(f"Hook EXIT inyectado en {m.name} ({count} returns, temps: {temps})")
         return True
-
-    def inject_d(self, tag: str, message: str) -> bool:
-        m = self.target
-        if self._body_contains(self.MARKER_D):
-            log_warn(f"Log D ya presente en {m.name}; se omite")
-            return True
-
-        temps = self._apply_plan(need=2)
-        if temps is None:
-            return False
-
-        idx = self._find_registers_line()
-        if idx is None:
-            idx = m.start_line
-
-        block = [
-            f"    # {self.MARKER_D} - {_utc_now_iso()}",
-            generate_d_log(tag, message, temps, self.remote_logger_class),
-            "",
-        ]
-        self.lines[idx + 1:idx + 1] = block
-        self._write_registers_to_lines()
-
-        log_ok(f'Log d("{tag}", "{message}") inyectado en {m.name} (temps: {temps})')
-        return True
-
+        
     def save(self, output: str | None = None, backup: bool = True) -> None:
         self._write_registers_to_lines()
         out_path = Path(output) if output else self.original_path
@@ -338,5 +313,67 @@ class HookInjector:
             log_info(f"Backup guardado en: {bak}")
 
         out_path.write_text("\n".join(self.lines) + "\n", encoding="utf-8")
-        log_ok(f"Archivo guardado: {out_path}")
+        log_ok(f"Archivo guardado: {out_path}") 
+     
 
+    def inject_lifecycle_tracker(self) -> bool:
+        """Inyecta LifecycleTracker.init(this) justo después de invoke-super onCreate."""
+        m = self.target
+        if m is None or m.name != "onCreate":
+            log_error("El método objetivo debe ser 'onCreate'")
+            return False
+
+        full_marker = "Lcom/deadnote/LifecycleTracker;->init("
+        if self._body_contains(full_marker):
+            log_warn(f"LifecycleTracker ya inyectado en {m.name}; se omite")
+            return True
+
+        end_idx = self._find_end_method_line()
+        if end_idx is None:
+            log_error("No se encontró .end method")
+            return False
+
+        # Detectar si el método es estático (no hay p0)
+        if m.is_static():
+            log_error("onCreate no puede ser estático")
+            return False
+
+        # Buscar invoke-super a onCreate de Application o Activity
+        super_idx = None
+        super_sig = None
+        for i in range(m.start_line + 1, end_idx):
+            line = self.lines[i].strip()
+            if not line.startswith("invoke-super"):
+                continue
+            if "->onCreate()V" in line:
+                super_sig = "()V"
+            elif "->onCreate(Landroid/os/Bundle;)V" in line:
+                super_sig = "(Landroid/os/Bundle;)V"
+            else:
+                continue
+            super_idx = i
+            break
+
+        if super_idx is None:
+            log_error("No se encontró invoke-super a onCreate() en el método")
+            return False
+
+        # Verificar que p0 sea Application antes de pasar como Application
+        # (si es Activity con onCreate(Bundle), no forzamos Application)
+        if super_sig == "()V":
+            # Application.onCreate() -> p0 es Application
+            arg_type = "Landroid/app/Application;"
+        else:
+            # Activity.onCreate(Bundle) -> p0 es Activity, NO Application
+            log_error("LifecycleTracker solo se inyecta en Application.onCreate()")
+            return False
+
+        block = [
+            f"    # LifecycleTracker inyectado - {_utc_now_iso()}",
+            f"    invoke-static {{p0}}, Lcom/deadnote/LifecycleTracker;->init({arg_type})V",
+            "",
+        ]
+
+        self.lines[super_idx + 1:super_idx + 1] = block
+        log_ok(f"LifecycleTracker.init(p0) inyectado exitosamente en {m.name}")
+        return True 

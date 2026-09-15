@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 
 from ._analyze import analyze_method
-from ._cli import build_hook_parser, run_hooker, show_method_source
+from ._cli import build_hook_parser, run_hooker
 from ._codegen import generate_d_log, generate_hook_enter, generate_hook_exit
 from ._colors import Color, _c, log_error, log_header, log_info, log_ok, log_warn
 from ._emit import box_scalar, const_null, indent, invoke_static, move_object
@@ -62,7 +62,7 @@ __all__ = [
     "parse_type_list",
     "plan_hook_registers",
     "run_hooker",
-    "show_method_source",
+    # "show_method_source",
 ]
 
 

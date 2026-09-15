@@ -1,4 +1,4 @@
-"""CLI del inyector de hooks."""
+"""CLI del inyector de hooks (subcomandos estilo git)."""
 from __future__ import annotations
 
 import argparse
@@ -9,62 +9,73 @@ from ._colors import Color, _c, log_error, log_header, log_info, log_ok, log_war
 from ._injector import HookInjector
 
 
+def _add_common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("file", help="Archivo Smali a procesar")
+    p.add_argument("-m", "--method", help="Nombre del método objetivo")
+    p.add_argument("--sig", "--signature", dest="signature",
+                   help="Subcadena de firma para desambiguar sobrecargas")
+    p.add_argument("--no-color", action="store_true",
+                   help="Desactivar resaltado")
+    p.add_argument("--style", default="default",
+                   help='Estilo Pygments (p.ej. "monokai")')
+    p.add_argument("--no-backup", action="store_true", help="No crear backup")
+    p.add_argument("-o", "--output", help="Archivo de salida")
+    p.add_argument("-v", "--verbose", action="store_true")
+
+
 def build_hook_parser(prog: str = "smalilog hook",
                       remote_logger_class: str = "Lcom/deadnote/RemoteLogger;"
                       ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="Inyecta hooks de observación en archivos Smali",
+        description="Inyecta hooks de observación en archivos Smali.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog="""\
 Ejemplos:
-  smalilog hook archivo.smali --list
-  smalilog hook archivo.smali --method Sf --analyze
-  smalilog hook archivo.smali --method Sf --action show
-  smalilog hook archivo.smali --all
-  smalilog hook archivo.smali --method Sf --action enter
-  smalilog hook archivo.smali --method Sf --action both
-  smalilog hook archivo.smali --method Sf --action d --tag MiTag --message "Hola"
-  smalilog hook archivo.smali --method Sf --signature "(I)V" --action both
-        """,
+  smalilog hook list       app.smali
+  smalilog hook show       app.smali -m Sf
+  smalilog hook analyze    app.smali -m Sf --sig "(I)V"
+  smalilog hook enter      app.smali -m Sf
+  smalilog hook exit       app.smali -m Sf
+  smalilog hook both       app.smali -m Sf
+  smalilog hook log        app.smali -m Sf --tag APP --message "hola"
+  smalilog hook lifecycle  Application.smali -m onCreate
+""",
     )
-    parser.add_argument("file", nargs="?", help="Archivo Smali a procesar")
-    parser.add_argument("--method", "-m", help="Nombre del método objetivo")
-    parser.add_argument("--signature",
-                        help="Subcadena de firma para desambiguar sobrecargas")
-    parser.add_argument("--action", "-a",
-                        choices=["enter", "exit", "both", "observ",
-                                 "analyze", "d", "show"],
-                        help="Acción ")
-    parser.add_argument("--tag", default="LOG", help='Tag para acción "d"')
-    parser.add_argument("--message", "--msg", default="Mensaje de log",
-                        help='Mensaje para acción "d"')
-    parser.add_argument("--analyze", action="store_true", help="Solo analizar")
-    parser.add_argument("--list", "-l", action="store_true",
-                        help="Listar métodos")
-    parser.add_argument("--all", action="store_true",
-                        help='Con "show": mostrar todos los métodos '
-                             "(implica --action show)")
-    parser.add_argument("--no-color", action="store_true",
-                        help="Desactivar resaltado de sintaxis")
-    parser.add_argument("--style", default="default",
-                        help='Estilo Pygments (p.ej. "monokai")')
-    parser.add_argument("--no-backup", action="store_true",
-                        help="No crear backup")
-    parser.add_argument("--output", "-o", help="Archivo de salida")
+    sub = parser.add_subparsers(dest="cmd", metavar="<cmd>", required=True)
+
+    # list
+    p = sub.add_parser("list", help="Lista los métodos del archivo")
+    p.add_argument("file")
+
+    # show
+    p = sub.add_parser("show", help="Muestra el código de un método")
+    _add_common(p)
+    p.add_argument("--all", action="store_true",
+                   help="Muestra todos los métodos con cuerpo")
+
+    # analyze
+    p = sub.add_parser("analyze", help="Analiza registros y plan de inyección")
+    _add_common(p)
+
+    # enter / exit / both / lifecycle
+    for name, help_ in [
+        ("enter",     "Inyecta hook de entrada"),
+        ("exit",      "Inyecta hook de salida"),
+        ("both",      "Inyecta enter + exit"),
+        ("lifecycle", "Inyecta LifecycleTracker en Application.onCreate"),
+    ]:
+        p = sub.add_parser(name, help=help_)
+        _add_common(p)
+
+    # log (antes "d")
+    p = sub.add_parser("log", help="Inyecta un log simple tag/mensaje")
+    _add_common(p)
+    p.add_argument("--tag", default="LOG")
+    p.add_argument("--message", "--msg", dest="message",
+                   default="Mensaje de log")
+
     return parser
-
-
-def show_method_source(file_path, method_name, signature=None,
-                       remote_logger_class="Lcom/deadnote/RemoteLogger;",
-                       **kwargs) -> bool:
-    """Ver el código completo de un método con resaltado de sintaxis."""
-    inj = HookInjector(file_path, remote_logger_class)
-    if not inj.load():
-        return False
-    if not inj.resolve_method(method_name, signature):
-        return False
-    return inj.show_method(**kwargs)
 
 
 def run_hooker(argv: list[str] | None = None,
@@ -75,94 +86,86 @@ def run_hooker(argv: list[str] | None = None,
                                remote_logger_class=remote_logger_class)
     args = parser.parse_args(argv)
 
-    if not args.file:
-        parser.error("se requiere la ruta del archivo .smali")
-
-    log_header("smalilog hook - Inyector de hooks")
-
-    injector = HookInjector(args.file, remote_logger_class)
-    if not injector.load():
+    inj = HookInjector(args.file, remote_logger_class)
+    if not inj.load():
         return 1
 
-    if args.list:
+    # ---- subcomandos que no inyectan ----
+        
+    if args.cmd == "list":
         log_header(f"Métodos en {args.file}")
-        for m in injector.methods:
+        for m in inj.methods:
             flags = []
-            if m.is_static():
-                flags.append("static")
-            if not m.has_body:
-                flags.append("sin cuerpo")
-            extra = f" [{' '.join(flags)}]" if flags else ""
-            print(f"  {_c(Color.GREEN, m.name)}{m.signature} "
+            if m.is_static():     flags.append("static")
+            if not m.has_body:    flags.append("sin cuerpo")
+            extra = f"  [{' '.join(flags)}]" if flags else ""
+            print(f"  {_c(Color.GREEN, m.name)}{m.signature}  "
                   f"({m.total_regs} regs){extra}")
         return 0
 
-    if args.action is None and not (args.list or args.analyze or args.all):
-        log_error("Debes especificar --action (o --list/--analyze/--all/--show)")
-        return 1
-
-    if args.analyze or args.action == "analyze":
-        if not args.method:
-            log_error("--analyze requiere --method")
-            return 1
-        if not injector.resolve_method(args.method, args.signature):
-            return 1
-        analyze_method(injector.target, injector.class_name)
-        return 0
-
-    if args.all and args.action != "show":
-        args.action = "show"
-
-    if args.action == "show":
+    if args.cmd == "show":
         color = not args.no_color
         if args.all:
-            shown = sum(
-                1 for m in injector.methods
-                if m.has_body and injector.show_method(method=m,
-                                                       color=color,
-                                                       style=args.style)
-            )
+            shown = sum(1 for m in inj.methods
+                        if m.has_body and inj.show_method(
+                            method=m, color=color, style=args.style))
             if not shown:
-                log_warn("Ningún método con cuerpo que mostrar")
+                log_warn("Ningún método con cuerpo")
                 return 1
             log_ok(f"{shown} método(s) mostrados")
             return 0
         if not args.method:
-            log_error("--action show requiere --method (o --all)")
+            log_error("show requiere -m <método> (o --all)")
             return 1
-        if not injector.resolve_method(args.method, args.signature):
+        if not inj.resolve_method(args.method, args.signature):
             return 1
-        injector.show_method(color=color, style=args.style)
+        inj.show_method(color=color, style=args.style)
         return 0
 
+    # ---- subcomandos que resuelven método ----
+
     if not args.method:
-        log_error("Debes especificar --method (o usar --list / --analyze)")
+        log_error(f"{args.cmd} requiere -m <método>")
         return 1
-    if not injector.resolve_method(args.method, args.signature):
+    if not inj.resolve_method(args.method, args.signature):
         return 1
+    if args.verbose:
+        analyze_method(inj.target, inj.class_name)
+    if args.cmd == "analyze":
+        analyze_method(inj.target, inj.class_name)
+        return 0
 
     log_info(f"Archivo: {args.file}")
-    log_info(f"Método:  {args.method}{injector.target.signature}")
-    log_info(f"Acción:  {args.action}")
-    analyze_method(injector.target, injector.class_name)
+    log_info(f"Método:  {args.method}{inj.target.signature}")
 
-    if args.action == "d":
-        success = injector.inject_d(args.tag, args.message)
-    elif args.action == "enter":
-        success = injector.inject_enter()
-    elif args.action == "exit":
-        success = injector.inject_exit()
+    # ---- inyección ----
+
+    if args.cmd == "enter":
+        ok = inj.inject_enter()
+    elif args.cmd == "exit":
+        ok = inj.inject_exit()
+    elif args.cmd == "both":
+        log_info("Por ahora no disponible...")
+        # ok_e = inj.inject_enter()
+        # ok_x = inj.inject_exit()
+        # ok = ok_e and ok_x
+        # if not ok and (ok_e or ok_x):
+        #     log_warn("Inyección parcial")
+        return 1
+    elif args.cmd == "log":
+        # ok = inj.inject_d(args.tag, args.message)
+        log_info("Por ahora no disponible...")
+        return 1
+    elif args.cmd == "lifecycle":
+        ok = inj.inject_lifecycle_tracker()
     else:
-        ok_enter = injector.inject_enter()
-        ok_exit = injector.inject_exit()
-        success = ok_enter and ok_exit
-        if not success and (ok_enter or ok_exit):
-            log_warn("Inyección parcial: revisa los mensajes anteriores")
+        parser.error(f"subcomando desconocido: {args.cmd}")
+        return 2
 
-    if not success:
+    if not ok:
         log_error("No se pudo completar la inyección")
         return 1
 
-    injector.save(output=args.output, backup=not args.no_backup)
-    log_header("INYECCIÓN COMPLETADA")
+    inj.save(output=args.output, backup=not args.no_backup)
+    log_ok("Inyección completada")
     return 0

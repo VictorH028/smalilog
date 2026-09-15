@@ -3,24 +3,22 @@ from __future__ import annotations
 
 from ._smali_model import SmaliMethod, count_parameter_registers
 
-
 def plan_hook_registers(method: SmaliMethod, need: int = 2) -> dict:
     param_regs = count_parameter_registers(method)
 
     if method.directive == "locals":
         orig_locals = method.registers_value
+        first_free = orig_locals            # params van después, implícitos
+        new_total_regs = orig_locals + need + param_regs
+        expand_to = orig_locals + need
     else:
-        # En .registers N, las variables locales originales son N - param_regs
-        orig_locals = max(0, method.total_regs - param_regs)
+        # .registers N: params están al final. Temps van DESPUÉS de N.
+        new_total_regs = method.registers_value + need
+        orig_locals = max(0, method.registers_value - param_regs)
+        first_free = method.registers_value
+        expand_to = new_total_regs
 
-    # Los registros temporales frescos SE TOMAN justo después de las locales originales:
-    # Ejemplo: si orig_locals=1 y need=2 -> ['v1', 'v2']
-    temps = [f"v{orig_locals + k}" for k in range(need)]
-
-    new_locals = orig_locals + need
-    new_total_regs = new_locals + param_regs
-
-    expand_to = new_locals if method.directive == "locals" else new_total_regs
+    temps = [f"v{first_free + k}" for k in range(need)]
 
     return {
         "expand_to": expand_to,
@@ -30,4 +28,3 @@ def plan_hook_registers(method: SmaliMethod, need: int = 2) -> dict:
         "orig_locals": orig_locals,
         "map_p0_to_v": f"v{new_total_regs - param_regs}" if param_regs > 0 else None,
     }
-
