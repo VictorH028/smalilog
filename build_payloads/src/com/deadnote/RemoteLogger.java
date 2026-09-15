@@ -2,7 +2,7 @@
 
 public final class RemoteLogger {
     private static boolean loaded = false;
-
+    private static final String TAG_ACTIVITY = "SMALILOG_ACTIVITY";
     static {
         try {
             System.loadLibrary("logger");
@@ -48,8 +48,11 @@ public final class RemoteLogger {
             function + " | result | " + value);
     }
 
+   
     public static void d(String tag, String msg) {
-        nativeSendLog("DEBUG", tag, msg);
+        if (!loaded) return;
+        String level = TAG_ACTIVITY.equals(tag) ? "INFO" : "DEBUG";
+        nativeSendLog(level, tag, msg);
     }
 
     private static native void nativeSendLog(String level, String tag, String msg);
