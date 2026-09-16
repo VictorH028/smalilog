@@ -152,6 +152,11 @@ RemoteLogger.hookExit(function, result);
 | Numéricos | `Integer`, `Long`, `Double`, `Float`, `int[]` |
 | Complejos | `Object`, `Bundle` |
 
+El codigo que se pasa despues a smali lo pueden ver aca 👉 [RemoteLogger](url) 
+
+> [!WARNING]
+> Esta aca porque es el que se escarga de la comunicación con el servidor.
+
 ---
 
 <a id="jni"></a>
@@ -181,26 +186,7 @@ Payload JSON esperado por el servidor:
 }
 ```
 
-> [!NOTE]
-> **Política de buffer:** `MAX_HEADERS = 16 KiB`, `MAX_BODY = 1 MiB`.
-
-> [!IMPORTANT]
-> Los registros usados en los hooks deben alinearse estrictamente con los tipos y firmas reales de la función original.
-
-**Fórmula de cálculo de registros:**
-
-```text
-REGISTROS_TOTALES = REGISTROS_ORIGINALES + REGISTROS_EXTRA_HOOKS
-
-Ejemplo:  .registers 2  →  .registers 6   (4 slots extra)
-```
-
-- **Rango seguro de temporales:** si `.registers` sube de `N_old` a `N_new`, el espacio libre es `v[N_old] .. v[N_new - 1]`.
-- **Mapeo `p`:**
-  - Instancia → `p0` = `this`, argumentos desde `p1`.
-  - Estático → argumentos desde `p0`.
-- **Alias `p0, p1, …`** se re-mapean automáticamente tras recalcular `.registers`.
-- **Control de destrucción:** verificar que no se sobrescriban registros vivos.
+Mas sobre el [Servidor](url) 
 
 ---
 
@@ -214,6 +200,8 @@ PORT = 9999
 
 > [!WARNING]
 > La librería `.so` está compilada de forma rígida (hardcoded) para hablar con este socket loopback.
+
+[librería](url) 
 
 **Despliegue:**
 
@@ -250,13 +238,6 @@ smalilog hook log        app.smali -m Sf --tag APP --message "hola"
 smalilog hook lifecycle  Application.smali -m onCreate
 ```
 
-**API programática:**
-
-```python
-from smalilog.injector.hooker import run_hooker
-
-run_hooker(["app.smali", "-m", "Sf", "enter"])
-```
 
 **Capacidades:**
 
@@ -329,7 +310,11 @@ lib/
 ```
 
 ---
-## [09] Intalacion
+
+## [10] Intalacion
+
+
+Para obtener lo que es el servidor y el inyector de smali
 
 ```bash 
 git clone [https://github.com/usuario/smalilog.git](https://github.com/usuario/smalilog.git)
@@ -338,10 +323,13 @@ cd smalilog
 # Creación de entorno e instalación editable
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
-
+pip3 install -e ".[dev]"
 
 ```
+
+Para el .dex 
+
+[Compilador de apk en termux](https://github.com/VictorH028/termux-apk-make) 
 
 ---
 

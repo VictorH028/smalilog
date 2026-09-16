@@ -1,3 +1,5 @@
+# Estructuta 
+
 ```
 injector/
 ├── __init__.py
@@ -15,9 +17,45 @@ injector/
 └── _cli.py                   # build_hook_parser, run_hooker, show_method_source
 ```
 
-# Reglas de esmali 
-- *Rango de temporales seguros**: Si .registers sube de N_{old} a N_{new}, los registros temporales frescos e inofensivos son exactamente v[N_{old} .. N_{new}-1].
+# Estructura interativa 
+```mermaid
+flowchart LR
+    hooker.py --> _cli.py
+    hooker.py --> _injector.py
+    _injector.py --> _codegen.py
+    _injector.py --> _register_planner.py
+    _injector.py --> _smali_parser.py
+    _codegen.py --> _emit.py
+    _emit.py --> _smali_types.py
+```
 
-> Direccionamiento de parámetros (p):
->> - En métodos de instancia (instance), p0 es this. Los argumentos reales comienzan en p1. 
->> - En métodos estáticos (static), los argumentos reales comienzan en p0.
+# Nevo 
+Para saver informacion del cache 
+> [!NOTE]
+> Usar en onCreate() en el princioal invoke-super despues 
+- `invoke-static {p0}, Lcom/deadnote/CacheManager;->CacheInfo(Landroid/content/Context;)V`
+
+Para ver la actividad que se ejecuta 
+> [!NOTE]
+> Va en el mimo lugar que cache
+- `invoke-static {p0}, Lcom/deadnote/LifecycleTracker;->init(Landroid/app/Application;)V`
+
+```smali 
+.method protected onCreate(Landroid/os/Bundle;)V
+    .registers 3
+
+    invoke-super {p0, p1}, Landroidx/appcompat/app/AppCompatActivity;->onCreate(Landroid/os/Bundle;)V
+
+    # Tu llamada inyectada aquí:
+    invoke-static {p0}, Lcom/deadnote/CacheManager;->CacheInfo(Landroid/content/Context;)V
+
+    return-void
+.end method
+```
+
+Como encontra este metodo 
+
+```bash 
+apkeditor info -i name.apk
+application-class=
+```
