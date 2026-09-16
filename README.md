@@ -11,7 +11,8 @@
 
 ### ⚡ [ SYSTEM STATUS: EXPERIMENTAL LOGGING FRAMEWORK ] ⚡
 
-*Instrumentación Smali de Bajo Nivel · Inyección JNI · Intercepción de Traza ARM64*
+> Inyector automático de trazabilidad y servidor de logs dinámicos para análisis y modificación de bytecode Smali en aplicaciones Android.
+
 
 ---
 
@@ -37,10 +38,11 @@
 - [◈ 07. Inyector Smali](#injector)
 - [◈ 08. Compilación nativa](#compile)
 - [◈ 09. Integración en APK](#deploy)
-- [◈ 10. Pruebas](#testing)
-- [◈ 11. Roadmap & Estado](#roadmap)
-- [◈ 12. Consideraciones de seguridad](#security)
-- [◈ 13. Contribuir](#contributing)
+- [◈ 10. Instalación](#-instalación)
+- [◈ 11. Pruebas](#testing)
+- [◈ 12. Roadmap & Estado](#roadmap)
+- [◈ 13. Consideraciones de seguridad](#security)
+- [◈ 14. Contribuir](#contributing)
 
 ---
 
@@ -118,28 +120,15 @@ sequenceDiagram
 ## [03] ESTRUCTURA DEL PROYECTO
 
 ```text
-.
-├── README.md
-├── MainActivity.java
-├── RemoteLogger.java
-├── native_logger.c
-├── liblogger.so
-├── log_server.py
-├── dex-inj/
-└── injector/
-    ├── __init__.py
-    ├── hooker.py
-    ├── _cli.py
-    ├── _injector.py
-    ├── _codegen.py
-    ├── _emit.py
-    ├── _register_planner.py
-    ├── _smali_model.py
-    ├── _smali_parser.py
-    ├── _smali_types.py
-    ├── _analyze.py
-    ├── _colors.py
-    └── _highlight.py
+smalilog/
+├── bin/                 # Librerías nativas compiladas (.so)
+├── build_payloads/      # Fuentes Java/Android y clases para inyección
+├── box/                 # Muestras Smali y pruebas de concepto
+├── src/smalilog/        # Paquete principal en Python
+│   ├── injector/        # Motor de parseo, análisis de registros e inyección
+│   ├── server/          # Servidor receptor de logs
+│   └── android/         # Utilidades de comunicación cliente-servidor
+└── tests/               # Suite de pruebas unitarias
 ```
 
 ---
@@ -337,6 +326,21 @@ Estructura ABI objetivo:
 lib/
 └── arm64-v8a/
     └── liblogger.so
+```
+
+---
+## [09] Intalacion
+
+```bash 
+git clone [https://github.com/usuario/smalilog.git](https://github.com/usuario/smalilog.git)
+cd smalilog
+
+# Creación de entorno e instalación editable
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+
 ```
 
 ---
