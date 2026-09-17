@@ -81,3 +81,7 @@ public class RemoteLogger {
 
 > [!WARNING]
 > El nombre debe coincidir exactamente: paquete com.deadnote, clase RemoteLogger, método nativeSendLog.
+
+
+# Referencia
+- [JNI](https://github.com/android/ndk/wiki/JNI) 

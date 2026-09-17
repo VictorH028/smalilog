@@ -13,6 +13,9 @@ Puntos clave:
 
 
 # Ideas para agregar 
+
+- DCL  -> Buscar 
+
 > [!NOTE]
 > No intalar desede pip3 da error sique los pasos de la wep 
 - [androguard](https://androguard.github.io/androguard/contributing.html)
@@ -30,7 +33,31 @@ Verificar la ruta de el venv
 poetry env info --path
 ```
 ---
+# Pendiente 
+- Monitoreo de trafico (Chucker)
+-  https://docs.oracle.com/en/java/javase/21/docs/specs/jni/invocation.html#jni_onload 
+- Cambiar la logica que la aplicación sea el servidor 
 
+
+Hacer que la .so carge configuracion informacion tomada del proyecto de frida 
+```
+    {
+  "interaction": {
+    "type": "listen",
+    "address": "127.0.0.1",
+    "port": 9999,
+    "on_load": "wait"
+  }
+}
+```
+
+Qué significa:
+
+· type: "listen": El Gadget se queda escuchando en un puerto TCP local.
+· port: 27042: Puerto por defecto de Frida.
+· on_load: "wait": Bloquea la app hasta que te conectes. Ideal para instrumentar antes de que corra el código.
+
+- 
 Esto es pra auto Backup manda la informacion a Google Drive 
 > [!NOTE]
 > Tener esto es cuenta para explotar 
