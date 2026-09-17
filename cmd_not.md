@@ -72,4 +72,58 @@ Esto es pra auto Backup manda la informacion a Google Drive
 
 - [document-api](https://docs.github.com/en/copilot/tutorials/customization-library/prompt-files/document-api) 
 
-- 
+
+# Mejoras 
+
+Un `AccessibilityService` puede observar todos los clicks de la app sin tocar el código. Solo necesitas:
+
+- Hay que activar el servisio en los ajustes 
+
+
+
+```xml
+<service
+    android:name=".ClickAccessibilityService"
+    android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+    <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService"/>
+    </intent-filter>
+    <meta-data
+        android:name="android.accessibilityservice"
+        android:resource="@xml/accessibility_config"/>
+</service>
+```
+
+Archivo de configuracion (res/xml/accessibility_config.xml)
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeViewClicked"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="100" />
+
+```
+
+```java
+public class ClickAccessibilityService extends AccessibilityService {
+    @Override
+    public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            CharSequence text = event.getText().isEmpty() ? "" : event.getText().get(0);
+            String msg = "CLICK → " + event.getClassName()
+                       + " | texto=" + text
+                       + " | package=" + event.getPackageName();
+            Log.d("ClickTracker", msg);
+        }
+    }
+    @Override
+    public void onInterrupt() {
+        // Requerido por la clase abstracta AccessibilityService
+    }
+}
+```
+
+

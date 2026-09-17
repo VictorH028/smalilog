@@ -16,7 +16,15 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         
         CacheManager.CacheInfo(this);
-
+        
+        if (!AccessibilityUtils.isAccessibilityServiceEnabled(this, ClickAccessibilityService.class)) {
+            // Si no está activo, redirigir al menú de Accesibilidad
+            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            startActivity(intent);
+        } else {
+            // El servicio ya está activo y escuchando eventos
+            RemoteLogger.d("MainActivity", "ClickAccessibilityService ya está habilitado.");
+        };
         
                 // ---------------------------------------------------------
         // 1) d(tag, msg)  → log simple con distintos tags
