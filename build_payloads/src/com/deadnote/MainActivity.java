@@ -1,104 +1,64 @@
 package com.deadnote;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
+import android.provider.Settings;
 import android.view.Gravity;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import java.util.List;                       
-import com.deadnote.CacheManager;
-
+import com.deadnote.RemoteLogger;
 
 public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        CacheManager.CacheInfo(this);
-        
-        if (!AccessibilityUtils.isAccessibilityServiceEnabled(this, ClickAccessibilityService.class)) {
-            // Si no está activo, redirigir al menú de Accesibilidad
-            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            startActivity(intent);
-        } else {
-            // El servicio ya está activo y escuchando eventos
-            RemoteLogger.d("MainActivity", "ClickAccessibilityService ya está habilitado.");
-        };
-        
-                // ---------------------------------------------------------
-        // 1) d(tag, msg)  → log simple con distintos tags
-        // ---------------------------------------------------------
-        // RemoteLogger.d("MainActivity", "onCreate iniciado");
-        // RemoteLogger.d("Lifecycle", "Actividad creada");
-        // RemoteLogger.d("UI", "Construyendo TextView...");
-        //
-        // ---------------------------------------------------------
-        // 2) hookEnter con TODOS los tipos posibles
-        // ---------------------------------------------------------
 
-        // Caso null
-        // RemoteLogger.hookEnter("testFunction", "argNull", null);
+        // Contenedor principal vertical
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER);
+        layout.setPadding(32, 32, 32, 32);
 
-        // Caso String
-        // RemoteLogger.hookEnter("testFunction", "argString", "test value");
-
-        // Caso Boolean (autoboxing a Boolean)
-        // RemoteLogger.hookEnter("testFunction", "argBooleanTrue",  true);
-        // RemoteLogger.hookEnter("testFunction", "argBooleanFalse", false);
-
-        // Caso "otro" → Integer, Long, Double, Array, Object...
-        // RemoteLogger.hookEnter("testFunction", "argInteger", 42);
-        // RemoteLogger.hookEnter("testFunction", "argLong",    123456789L);
-        // RemoteLogger.hookEnter("testFunction", "argDouble",  3.14159);
-        // RemoteLogger.hookEnter("testFunction", "argFloat",   2.5f);
-        // RemoteLogger.hookEnter("testFunction", "argArray",   new int[]{1, 2, 3});
-        // RemoteLogger.hookEnter("testFunction", "argObject",  new Object());
-        // RemoteLogger.hookEnter("testFunction", "argBundle",  savedInstanceState);
-        //
-        // ---------------------------------------------------------
-        // 3) hookExit con TODOS los tipos posibles
-        // ---------------------------------------------------------
-
-        // Caso null
-        // RemoteLogger.hookExit("testFunction", null);
-
-        // Caso String
-        // RemoteLogger.hookExit("testFunction", "test result");
-
-        // Caso Boolean
-        // RemoteLogger.hookExit("testFunction", true);
-        // RemoteLogger.hookExit("testFunction", false);
-
-        // Caso "otro"
-        // RemoteLogger.hookExit("testFunction", 99);
-        // RemoteLogger.hookExit("testFunction", 1.618);
-        // RemoteLogger.hookExit("testFunction", new StringBuilder("resultado"));
-
-        // ---------------------------------------------------------
-        // 4) UI
-        // ---------------------------------------------------------
+        // Texto informativo
         TextView tv = new TextView(this);
-        tv.setText("Hola desde MainActivity");
+        tv.setText("Panel de Control Deadnote");
         tv.setGravity(Gravity.CENTER);
-        setContentView(tv);
+        tv.setTextSize(18);
 
-        RemoteLogger.d("UI", "TextView mostrado en pantalla");
+        // Botón de activación
+        Button btnEnableService = new Button(this);
+        btnEnableService.setText("Prueba 1");
+        btnEnableService.setOnClickListener(v -> prueba1());
+
+        // Agregar elementos al layout
+        layout.addView(tv);
+        layout.addView(btnEnableService);
+
+        // Establecer el layout como vista principal
+        setContentView(layout);
+
+        RemoteLogger.d("MainActivity", "onCreate iniciado");
+    }
+
+    private void prueba1() {
+        RemoteLogger.d("Botton1", "Hola"); 
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // RemoteLogger.d("Lifecycle", "onResume");
-        // RemoteLogger.hookEnter("onResume", "state", "resumed");
-        // RemoteLogger.hookExit("onResume", "ok");
+        RemoteLogger.d("Lifecycle", "onResume");
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        // RemoteLogger.hookEnter("onPause", "state", "paused");
-        // RemoteLogger.d("Lifecycle", "onPause");
-        // RemoteLogger.hookExit("onPause", true);
+        RemoteLogger.d("Lifecycle", "onPause");
     }
 }
+
