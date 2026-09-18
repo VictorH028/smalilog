@@ -49,7 +49,7 @@
 <a id="overview"></a>
 ## [01] VISIÓN GENERAL
 
-`SMALILOG` es un sistema **experimental de telemetría y logging remoto** diseñado para Android Runtime (ART). Permite instrumentar binarios descompilados (`Smali`) para extraer trazas críticas en tiempo real —puntos de entrada/salida, argumentos, tipos y mensajes de runtime— transmitiéndolos vía **C/JNI** hacia un servidor HTTP local.
+`SMALILOG` es un sistema **experimental de  log  remoto** diseñado para Android Runtime (ART). Permite instrumentar aplicaciones decompiladas a codigo (`Smali`) para extraer trazas críticas en tiempo real —puntos de entrada/salida, argumentos, tipos y mensajes de runtime— transmitiéndolos vía **C/JNI** hacia un servidor HTTP local.
 
 Orientado a auditorías de seguridad, *reverse engineering*, depuración dinámica y análisis en entornos **Termux + ARM64**.
 
@@ -123,12 +123,12 @@ sequenceDiagram
 smalilog/
 ├── bin/                 # Librerías nativas compiladas (.so)
 ├── build_payloads/      # Fuentes Java/Android y clases para inyección
-├── box/                 # Muestras Smali y pruebas de concepto
+├── .doc/                # Ideas y ruebas de concepto
 ├── src/smalilog/        # Paquete principal en Python
-│   ├── injector/        # Motor de parseo, análisis de registros e inyección
-│   ├── server/          # Servidor receptor de logs
-│   └── android/         # Utilidades de comunicación cliente-servidor
-└── tests/               # Suite de pruebas unitarias
+    ├── injector/        # Motor de parseo, análisis de registros e inyección
+    ├── server/          # Servidor receptor de logs
+    └── android/         # Utilidades de comunicación cliente-servidor
+
 ```
 
 ---
@@ -186,7 +186,7 @@ Payload JSON esperado por el servidor:
 }
 ```
 
-Mas sobre el [Servidor](url) 
+Mas sobre el [Servidor](https://github.com/VictorH028/smalilog/tree/main/src/smalilog/server) 
 
 ---
 
@@ -201,7 +201,7 @@ PORT = 9999
 > [!WARNING]
 > La librería `.so` está compilada de forma rígida (hardcoded) para hablar con este socket loopback.
 
-[librería](url) 
+[librería](https://github.com/VictorH028/smalilog/tree/main/bin) 
 
 **Despliegue:**
 

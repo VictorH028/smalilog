@@ -12,6 +12,46 @@ Puntos clave:
 ​Parámetro p0: p0 hace referencia a this (la instancia de CrunchyrollApplication), la cual hereda de android.app.Application y se pasa a LifecycleTracker.init().
 
 
+# 
+
+¿Qué es attachBaseContext()?
+
+attachBaseContext() es un método del ciclo de vida de Android que se ejecuta antes que onCreate() tanto en Application como en Activity y Service. Su propósito es inyectar el Context base en el componente antes de que empiece a funcionar.
+
+📌 Orden de ejecución
+
+En una Application:
+
+```
+1. Constructor()                    ← se instancia la clase
+2. attachBaseContext(Context)       ← se le asigna el Context base
+3. onCreate()                       ← inicialización real
+```
+
+En una Activity:
+
+```
+1. Constructor()
+2. attachBaseContext(Context)       ← se le asigna el Context base
+3. onCreate()
+4. onStart()
+5. onResume()
+```
+
+attachBaseContext() siempre va primero. Es el primer método que recibe un Context válido.
+
+🧠 ¿Para qué sirve?
+
+El Context que recibe es el Context base de la aplicación (no el Context de la Activity, sino el global). A partir de él, el componente puede:
+
+· Acceder a recursos (getResources(), getAssets()).
+· Acceder a SharedPreferences.
+· Acceder a servicios del sistema (getSystemService()).
+· Crear otros Contexts derivados (createConfigurationContext(), etc.).
+
+Sin attachBaseContext(), el componente no tiene Context y no puede hacer nada.
+
+
 # Ideas para agregar 
 
 - DCL  -> Buscar 
