@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-
-from ._colors import Color, _c, log_info
+from ._colors import Color, log_info
 
 
 try:

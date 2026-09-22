@@ -10,7 +10,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.deadnote.RemoteLogger;
+import android.view.Gravity;
+import android.widget.TextView;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 
 public class MainActivity extends Activity {
 

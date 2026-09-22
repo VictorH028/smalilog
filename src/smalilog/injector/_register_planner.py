@@ -1,7 +1,7 @@
 """Planificación de registros frescos para inyección."""
 from __future__ import annotations
 
-from ._smali_model import SmaliMethod, count_parameter_registers
+from smalilog.smali import SmaliMethod, count_parameter_registers
 
 def plan_hook_registers(method: SmaliMethod, need: int = 2) -> dict:
     param_regs = count_parameter_registers(method)

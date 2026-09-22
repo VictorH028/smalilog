@@ -40,6 +40,11 @@ Para ver la actividad que se ejecuta
 > Va en el mimo lugar que cache
 - `invoke-static {p0}, Lcom/deadnote/LifecycleTracker;->init(Landroid/app/Application;)V`
 
+Para detectar errores
+> [!NOTE]
+> Invocación directa a CrashLogger.init(Context)
+`invoke-static {p0}, Lcom/deadnote/CatchError;->init(Landroid/content/Context;)V`
+
 ```smali 
 .method protected onCreate(Landroid/os/Bundle;)V
     .registers 3

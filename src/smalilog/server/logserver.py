@@ -6,8 +6,6 @@ Este módulo expone la clase LogServer, pensada para ser usada desde el CLI
 (smalilog.main) o programáticamente.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import socket

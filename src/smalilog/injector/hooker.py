@@ -13,36 +13,25 @@ from __future__ import annotations
 
 import sys
 
-from ._analyze import analyze_method
+from smalilog.smali import analyze_method
 from ._cli import build_hook_parser, run_hooker
-from ._codegen import generate_d_log, generate_hook_enter, generate_hook_exit
-from ._colors import Color, _c, log_error, log_header, log_info, log_ok, log_warn
-from ._emit import box_scalar, const_null, indent, invoke_static, move_object
+from smalilog.smali  import generate_d_log, generate_hook_enter, generate_hook_exit
+from smalilog.ui import Color
 from ._injector import HookInjector
 from ._register_planner import plan_hook_registers
-from ._smali_model import (
+from smalilog.smali import (
     SmaliMethod,
     count_parameter_registers,
     normalize_reg,
     param_register_offsets,
 )
-from ._smali_parser import parse_class_name, parse_smali_file
-from ._smali_types import (
-    _type_size,
-    is_reference,
+from smalilog.smali import parse_class_name, parse_smali_file
+from smalilog.smali import (
     parse_type_list,
-    params_raw,
-    return_raw,
 )
 
 REMOTE_LOGGER_CLASS = "Lcom/deadnote/RemoteLogger;"
 
-# Alias retro-compatibles (nombres privados originales)
-_parse_method_line = None  # ver _smali_parser
-_invoke_static = invoke_static
-_move_object = move_object
-_const_null = const_null
-_box_scalar = box_scalar
 
 __all__ = [
     "REMOTE_LOGGER_CLASS",

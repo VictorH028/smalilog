@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
-from ._analyze import analyze_method
-from ._colors import Color, _c, log_error, log_header, log_info, log_ok, log_warn
+from smalilog.smali import analyze_method
+from smalilog.ui import Color, log_error, log_header, log_info, log_ok, log_warn
 from ._injector import HookInjector
 
 

@@ -1,9 +1,9 @@
 """Análisis descriptivo de métodos Smali."""
 from __future__ import annotations
 
-from ._colors import Color, _c, log_header
-from ._register_planner import plan_hook_registers
-from ._smali_model import (
+from smalilog.ui._colors import Color, _c, log_header
+from smalilog.injector._register_planner import plan_hook_registers
+from smalilog.smali._model import (
     SmaliMethod,
     count_parameter_registers,
     param_register_offsets,
