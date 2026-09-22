@@ -1,11 +1,8 @@
 """Modelo de método Smali y mapeo de registros de parámetros."""
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 
-from ._colors import log_warn
-from ._smali_types import _type_size, parse_type_list, params_raw, return_raw
-
+from smalilog.ui import log_warn
+from ._types import _type_size, parse_type_list, params_raw, return_raw
 
 @dataclass
 class SmaliMethod:

@@ -15,16 +15,15 @@ Ejemplos:
 """
 
 from __future__ import annotations
-
 import argparse
 import logging
 import sys
 import time
 
-from . import config
-from .injector.hooker import run_hooker
+from smalilog.injector import run_hooker
 from .server import LogServer
-
+from smalilog.ui import _c
+from . import config
 # --------------------------------------------------------------------------- #
 #  Constantes
 # --------------------------------------------------------------------------- #
@@ -39,15 +38,6 @@ LOG_LEVELS = {
     "ERROR": logging.ERROR,
     "CRITICAL": logging.CRITICAL,
 }
-
-# --------------------------------------------------------------------------- #
-#  Colores ANSI (fallback mínimo si el usuario tiene NO_COLOR)
-# --------------------------------------------------------------------------- #
-import os
-_USE_COLOR = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
-
-def _c(code: str, s: str) -> str:
-    return f"{code}{s}\033[0m" if _USE_COLOR else s
 
 _BOLD   = "\033[1m"
 _CYAN   = "\033[96m"

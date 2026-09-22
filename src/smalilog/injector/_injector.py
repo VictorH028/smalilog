@@ -6,14 +6,12 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ._codegen import generate_d_log, generate_hook_enter, generate_hook_exit
-from ._colors import Color, log_error, log_info, log_ok, log_warn
-from ._emit import _regnum
-from ._highlight import highlight_line
+from smalilog.smali import generate_d_log, generate_hook_enter, generate_hook_exit
+from smalilog.ui import Color, log_error, log_info, log_ok, log_warn
+from smalilog.ui import highlight_line
 from ._register_planner import plan_hook_registers
-from ._smali_model import SmaliMethod, normalize_reg
-from ._smali_parser import parse_class_name, parse_smali_file
-from ._smali_types import is_reference
+from smalilog.smali import SmaliMethod, normalize_reg, parse_class_name, parse_smali_file, is_reference
+
 
 
 def _utc_now_iso() -> str:

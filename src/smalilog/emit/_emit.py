@@ -1,5 +1,4 @@
 """Helpers de emisión de instrucciones Dalvik."""
-from __future__ import annotations
 
 
 def _regnum(r: str) -> int:
@@ -20,15 +19,25 @@ def invoke_static(regs: list[str], target: str) -> str:
 
 
 def move_object(dst: str, src: str) -> str:
-    if _regnum(dst) > 15 or _regnum(src) > 15:
-        return f"move-object/16 {dst}, {src}"
-    return f"move-object {dst}, {src}"
+    d, s = _regnum(dst), _regnum(src)
+    if d <= 15 and s <= 15:
+        return f"move-object {dst}, {src}"
+    if d <= 255 and s <= 65535:
+        return f"move-object/from16 {dst}, {src}"
+    raise ValueError(f"move-object no soporta {dst}, {src}")
 
+def move_result_object(dst: str) -> str:
+    if _regnum(dst) > 255:
+        raise ValueError(f"move-result-object solo v0..v255, no {dst}")
+    return f"move-result-object {dst}"
 
 def const_null(reg: str) -> str:
-    if _regnum(reg) <= 15:
+    n = _regnum(reg)
+    if n <= 15:
         return f"const/4 {reg}, 0x0"
-    return f"const/16 {reg}, 0x0"
+    if n <= 255:
+        return f"const/16 {reg}, 0x0"
+    return f"const {reg}, 0x0"
 
 
 _WIDE_BOX = {
@@ -39,6 +48,8 @@ _WIDE_BOX = {
 
 def box_scalar(desc: str, src: str, dst: str) -> list[str]:
     """Boxea un escalar smali a Object."""
+    if _regnum(dst) > 255:
+        raise ValueError(f"move-result-object solo acepta v0..v255, no {dst}")
     if desc == "F":
         target = "Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;"
     elif desc in _WIDE_BOX:
@@ -49,7 +60,6 @@ def box_scalar(desc: str, src: str, dst: str) -> list[str]:
 
 
 def indent(code: str, spaces: int = 4) -> str:
-    prefix = " " * spaces
-    return "\n".join(
-        prefix + ln if ln.strip() else ln for ln in code.split("\n")
-    )
+    pad = " " * spaces
+    return "\n".join(pad + ln if ln.strip() else ln for ln in code.splitlines())
+

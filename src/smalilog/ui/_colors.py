@@ -33,3 +33,10 @@ def log_header(msg: str) -> None:
 
 def use_color_default() -> bool:
     return _USE_COLOR
+
+
+def set_use_color(value: bool | None = None) -> bool:
+    global _USE_COLOR
+    if value is not None:
+        _USE_COLOR = value
+    return _USE_COLOR

@@ -1,8 +1,7 @@
 """Generadores de bloques de hook (enter / exit / d)."""
-from __future__ import annotations
 
-from ._emit import box_scalar, const_null, indent, invoke_static, move_object
-from ._smali_types import is_reference
+from smalilog.emit._emit import box_scalar, const_null, indent, invoke_static, move_object
+from ._types import is_reference
 
 
 def generate_hook_enter(func_name, arg_name, arg_desc, arg_register, temps,
