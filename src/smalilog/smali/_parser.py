@@ -1,7 +1,7 @@
 """Parser de archivos Smali."""
 
 import re
-from smalilog.smali._model import SmaliMethod
+from ._model import SmaliMethod
 
 
 def _parse_method_line(line: str):

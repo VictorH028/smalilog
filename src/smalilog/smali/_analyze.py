@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from smalilog.ui._colors import Color, _c, log_header
-from smalilog.smali import plan_hook_registers
-from smalilog.smali._model import (
+from ._register_planner import plan_hook_registers
+from ._model import (
     SmaliMethod,
     count_parameter_registers,
     param_register_offsets,
