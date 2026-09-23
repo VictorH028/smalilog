@@ -1,6 +1,7 @@
 """Modelo, parser y codegen de Smali."""
 from __future__ import annotations
 
+from ._register_planner import plan_hook_registers
 from ._codegen import generate_d_log, generate_hook_enter, generate_hook_exit
 from ._model import (
     SmaliMethod,
@@ -26,5 +27,6 @@ __all__ = [
     "is_reference",
     "parse_type_list",
     "params_raw",
+    "plan_hook_registers",
     "return_raw",
 ]

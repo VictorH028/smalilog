@@ -12,8 +12,10 @@ try:
     from pygments.lexers import SmaliLexer
     _HAS_PYGMENTS = True
 except ImportError:
+    _pg_highlight = None          # type: ignore[assignment]
+    Terminal256Formatter = None   # type: ignore[assignment]
+    SmaliLexer = None             # type: ignore[assignment]
     _HAS_PYGMENTS = False
-
 
 _FALLBACK_NOTED = False
 
@@ -71,15 +73,20 @@ def _highlight_fallback(line: str) -> str:
         out.append(line[last:m.start()])
         kind = m.lastgroup
         tok = m.group()
-        out.append(_color_memberref(tok) if kind == "memberref"
-                   else f"{_FB_COLORS[kind]}{tok}{Color.RESET}")
+        kind = m.lastgroup
+        if kind is None:
+            out.append(tok)
+            last = m.end()
+            continue
+        out.append(_FB_COLORS[kind] + tok + Color.RESET)
         last = m.end()
     out.append(line[last:])
     return "".join(out)
 
-
 @lru_cache(maxsize=None)
 def _pg_formatter(style: str):
+    if Terminal256Formatter is None:
+        raise RuntimeError("pygments no instalado")
     return Terminal256Formatter(style=style)
 
 
@@ -94,12 +101,11 @@ def _notify_fallback_once() -> None:
 def highlight_line(line: str, color: bool = True, style: str = "default") -> str:
     if not color:
         return line
-    if _HAS_PYGMENTS:
+    if _HAS_PYGMENTS and _pg_highlight is not None and SmaliLexer is not None:
         return _pg_highlight(line, SmaliLexer(),
                              _pg_formatter(style)).rstrip("\n")
     _notify_fallback_once()
     return _highlight_fallback(line)
-
 
 def has_pygments() -> bool:
     return _HAS_PYGMENTS

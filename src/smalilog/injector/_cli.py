@@ -6,7 +6,7 @@ import argparse
 from smalilog.smali import analyze_method
 from smalilog.ui import Color, log_error, log_header, log_info, log_ok, log_warn
 from ._injector import HookInjector
-
+from smalilog.ui import _c 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("file", help="Archivo Smali a procesar")
@@ -128,10 +128,15 @@ def run_hooker(argv: list[str] | None = None,
         return 1
     if not inj.resolve_method(args.method, args.signature):
         return 1
+    if inj.target is None:                          # narrowing para el checker
+        log_error("Método no resuelto")
+        return 1
+
+    target = inj.target   # ya es SmaliMethod
     if args.verbose:
-        analyze_method(inj.target, inj.class_name)
+        analyze_method(target, inj.class_name)
     if args.cmd == "analyze":
-        analyze_method(inj.target, inj.class_name)
+        analyze_method(target, inj.class_name)
         return 0
 
     log_info(f"Archivo: {args.file}")

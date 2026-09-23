@@ -258,21 +258,14 @@ def _cmd_server(args: argparse.Namespace) -> int:
         print(f"Modo        : "
               f"{'hilo aparte' if args.no_blocking else 'bloqueante'}")
 
-    common = {
-        "host": args.host,
-        "port": args.port,
-        "log_file": args.log_file,
-        "log_level": log_level,
-    }
+    server: LogServer | None = None
     try:
-        server = LogServer(max_headers=args.max_headers,
-                           max_body=args.max_body, **common)
-    except TypeError:
-        server = LogServer(**common)
-        server.MAX_HEADERS = args.max_headers
-        server.MAX_BODY = args.max_body
-
-    try:
+        server = LogServer(
+            host=args.host,
+            port=args.port,
+            max_headers=args.max_headers,
+            max_body=args.max_body,
+        )
         server.start(blocking=not args.no_blocking)
         if args.no_blocking:
             _wait_background_server(server)
@@ -282,13 +275,13 @@ def _cmd_server(args: argparse.Namespace) -> int:
         print(f"Error al iniciar el servidor: {exc}", file=sys.stderr)
         return EXIT_ERROR
     finally:
-        try:
-            server.stop()
-        except Exception as exc:
-            print(f"Aviso: no se pudo detener limpiamente: {exc}",
-                  file=sys.stderr)
+        if server is not None:
+            try:
+                server.stop()
+            except Exception as exc:
+                print(f"Aviso: no se pudo detener limpiamente: {exc}",
+                      file=sys.stderr)
     return EXIT_OK
-
 
 # --------------------------------------------------------------------------- #
 #  Entry point

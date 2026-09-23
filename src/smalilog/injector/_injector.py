@@ -8,10 +8,10 @@ from pathlib import Path
 
 from smalilog.smali import generate_d_log, generate_hook_enter, generate_hook_exit
 from smalilog.ui import Color, log_error, log_info, log_ok, log_warn
-from smalilog.ui import highlight_line
-from ._register_planner import plan_hook_registers
+from smalilog.ui import highlight_line, use_color_default
+from smalilog.smali import plan_hook_registers
 from smalilog.smali import SmaliMethod, normalize_reg, parse_class_name, parse_smali_file, is_reference
-
+from smalilog.emit._emit import _regnum
 
 
 def _utc_now_iso() -> str:
@@ -43,6 +43,15 @@ class HookInjector:
         self.lines, self.methods = parse_smali_file(content)
         self.class_name = parse_class_name("\n".join(self.lines))
         return True
+    
+    def _require_target(self) -> SmaliMethod:
+        """Devuelve self._require_target() garantizando que no es None."""
+        if self._require_target() is None:
+            raise RuntimeError(
+                "HookInjector: no hay método resuelto. "
+                "Llama a resolve_method() primero."
+            )
+        return self._require_target()
 
     def resolve_method(self, name: str, signature: str | None = None) -> bool:
         self.target = None
@@ -64,8 +73,8 @@ class HookInjector:
             return False
 
         self.target = cands[0]
-        if not self.target.has_body:
-            log_error(f"'{self.target.name}' no tiene cuerpo "
+        if not self._require_target().has_body:
+            log_error(f"'{self._require_target().name}' no tiene cuerpo "
                       f"(abstract/native): nada que instrumentar")
             return False
         return True
@@ -73,14 +82,14 @@ class HookInjector:
     # ---------- helpers de línea ----------
 
     def _find_registers_line(self) -> int | None:
-        m = self.target
+        m = self._require_target()
         for i in range(m.start_line + 1, m.end_line + 1):
             if re.match(r"\s*\.(registers|locals)\s+\d+", self.lines[i]):
                 return i
         return None
 
     def _find_end_method_line(self, m: SmaliMethod | None = None) -> int | None:
-        m = m or self.target
+        m = m or self._require_target()
         for i in range(m.start_line, len(self.lines)):
             if self.lines[i].strip().startswith(".end method"):
                 return i
@@ -89,12 +98,12 @@ class HookInjector:
     def _body_contains(self, marker: str) -> bool:
         end = self._find_end_method_line()
         if end is None:
-            end = self.target.end_line
+            end = self._require_target().end_line
         return any(marker in self.lines[i]
-                   for i in range(self.target.start_line, end + 1))
+                   for i in range(self._require_target().start_line, end + 1))
 
     def _method_id(self) -> str:
-        m = self.target
+        m = self._require_target()
         cls = self.class_name or "LUnknown;"
         return f"{cls}->{m.name}{m.signature}"
 
@@ -102,7 +111,7 @@ class HookInjector:
 
     def _apply_plan(self, need: int) -> list[str] | None:
         """Aplica la planificación de registros universal usando _register_planner.py"""
-        m = self.target
+        m = self._require_target()
         plan = plan_hook_registers(m, need=need)
         temps = plan["temps"]
 
@@ -118,11 +127,11 @@ class HookInjector:
         return temps
 
     def _write_registers_to_lines(self) -> None:
-        if self.pending_registers is None or self.target is None:
+        if self.pending_registers is None or self._require_target() is None:
             return
         idx = self._find_registers_line()
         if idx is None:
-            self.lines.insert(self.target.start_line + 1,
+            self.lines.insert(self._require_target().start_line + 1,
                               f"    .registers {self.pending_registers}")
             log_info(f"Añadida directiva .registers {self.pending_registers}")
             return
@@ -138,8 +147,7 @@ class HookInjector:
     def show_method(self, method: SmaliMethod | None = None,
                     color: bool | None = None, line_numbers: bool = True,
                     style: str = "default") -> bool:
-        from ._colors import use_color_default
-        m = method or self.target
+        m = method or self._require_target()
         if m is None:
             log_error("No hay método seleccionado")
             return False
@@ -196,7 +204,7 @@ class HookInjector:
     # ---------- inyección ----------
 
     def inject_enter(self) -> bool:
-        m = self.target
+        m = self._require_target()
         if self._body_contains(self.MARKER_ENTER):
             log_warn(f"Hook ENTER ya presente en {m.name}; se omite")
             return True
@@ -240,7 +248,7 @@ class HookInjector:
         return True
 
     def inject_exit(self) -> bool:
-        m = self.target
+        m = self._require_target()    
         if self._body_contains(self.MARKER_EXIT):
             log_warn(f"Hook EXIT ya presente en {m.name}; se omite")
             return True
@@ -265,6 +273,7 @@ class HookInjector:
             return False
 
         # Actualizar el modelo del método ANTES de evaluar normalizaciones de pX -> vY
+        assert self.pending_registers is not None
         m.directive = "registers"
         m.registers_value = self.pending_registers
 
@@ -316,7 +325,7 @@ class HookInjector:
 
     def inject_lifecycle_tracker(self) -> bool:
         """Inyecta LifecycleTracker.init(this) justo después de invoke-super onCreate."""
-        m = self.target
+        m = self._require_target()
         if m is None or m.name != "onCreate":
             log_error("El método objetivo debe ser 'onCreate'")
             return False

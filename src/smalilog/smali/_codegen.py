@@ -54,7 +54,7 @@ def generate_hook_exit(func_name, return_line, return_reg, temps, ret_type,
         body = [f'const-string {t_val}, "void"']
         invoke = invoke_static(
             [t_name, t_val],
-            f"{remote_logger_class}->d(Ljava/lang/String;Ljava/lang/String;)V",
+            f"{remote_logger_class}->hookExit(Ljava/lang/String;Ljava/lang/String;)V",
         )
         return indent("\n".join(head + body + [invoke, "# ================================"]))
 

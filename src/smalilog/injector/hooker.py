@@ -12,13 +12,13 @@ La implementación vive en los submódulos `_*.py`.
 from __future__ import annotations
 
 import sys
-
+    
 from smalilog.smali import analyze_method
 from ._cli import build_hook_parser, run_hooker
 from smalilog.smali  import generate_d_log, generate_hook_enter, generate_hook_exit
 from smalilog.ui import Color
 from ._injector import HookInjector
-from ._register_planner import plan_hook_registers
+from smalilog.smali import plan_hook_registers
 from smalilog.smali import (
     SmaliMethod,
     count_parameter_registers,

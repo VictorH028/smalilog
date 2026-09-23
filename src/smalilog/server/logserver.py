@@ -15,26 +15,28 @@ from typing import Optional
 
 class LogServer:
     """Servidor TCP/HTTP ligero para recepción y registro de logs en formato JSON."""
-
-    MAX_HEADERS: int = 16 * 1024
-    MAX_BODY: int = 1024 * 1024
+    _DEFAULT_MAX_HEADERS = 16 * 1024
+    _DEFAULT_MAX_BODY = 1024 * 1024
 
     def __init__(
-        self,
-        host: str = "127.0.0.1",
-        port: int = 9999,
-        log_file: str = "app_logs.txt",
-        log_level: int = logging.INFO,
+            self, 
+            host: str = "127.0.0.1",
+            port: int = 9999,
+            max_headers: int = _DEFAULT_MAX_HEADERS,
+            max_body: int = _DEFAULT_MAX_BODY
     ) -> None:
         self.host = host
         self.port = port
-        self.log_file = log_file
+        self.log_file = "log.rxt"
+        self.max_headers = max_headers
+        self.max_body = max_body
         self.is_running = False
         self._server_socket: Optional[socket.socket] = None
         self._thread: Optional[threading.Thread] = None
 
         self.logger = logging.getLogger("smalilog.LogServer")
-        self.logger.setLevel(log_level)
+        
+        # self.logger.setLevel(log_level)
         self.logger.propagate = False
 
         if not self.logger.handlers:
@@ -63,7 +65,7 @@ class LogServer:
             if not chunk:
                 raise ValueError("Conexión cerrada")
             data += chunk
-            if len(data) > self.MAX_HEADERS:
+            if len(data) > self.max_headers:
                 raise ValueError("Cabeceras HTTP demasiado grandes")
 
         headers, body = data.split(b"\r\n\r\n", 1)
@@ -99,7 +101,7 @@ class LogServer:
             raise ValueError("Falta Content-Length")
         if content_length < 0:
             raise ValueError("Content-Length negativo")
-        if content_length > self.MAX_BODY:
+        if content_length > self.max_body:
             raise ValueError("Cuerpo demasiado grande")
 
         while len(body) < content_length:
@@ -120,7 +122,7 @@ class LogServer:
 
             level = str(log_data.get("level", "INFO"))[:100]
             tag = str(log_data.get("tag", "APP"))[:500]
-            message = str(log_data.get("message", ""))[: self.MAX_BODY]
+            message = str(log_data.get("message", ""))[: self._DEFAULT_MAX_BODY]
 
             log_entry = f"[{tag}] {message}"
 
