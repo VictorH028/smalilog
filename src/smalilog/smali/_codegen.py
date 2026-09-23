@@ -1,6 +1,6 @@
 """Generadores de bloques de hook (enter / exit / d)."""
 
-from smalilog.emit._emit import box_scalar, const_null, indent, invoke_static, move_object
+from smalilog.emit import box_scalar, const_null, indent, invoke_static, move_object
 from ._types import is_reference
 
 
