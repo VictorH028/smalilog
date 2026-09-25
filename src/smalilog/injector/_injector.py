@@ -46,12 +46,12 @@ class HookInjector:
     
     def _require_target(self) -> SmaliMethod:
         """Devuelve self._require_target() garantizando que no es None."""
-        if self._require_target() is None:
+        if self.target is None:
             raise RuntimeError(
                 "HookInjector: no hay método resuelto. "
                 "Llama a resolve_method() primero."
             )
-        return self._require_target()
+        return self.target
 
     def resolve_method(self, name: str, signature: str | None = None) -> bool:
         self.target = None
@@ -73,8 +73,8 @@ class HookInjector:
             return False
 
         self.target = cands[0]
-        if not self._require_target().has_body:
-            log_error(f"'{self._require_target().name}' no tiene cuerpo "
+        if not self.target.has_body:
+            log_error(f"'{self.target.name}' no tiene cuerpo "
                       f"(abstract/native): nada que instrumentar")
             return False
         return True
@@ -203,19 +203,19 @@ class HookInjector:
 
     # ---------- inyección ----------
 
-    def inject_enter(self) -> bool:
+    def inject_enter(self, tag: str = "ENTER"  ) -> bool:
         m = self._require_target()
         if self._body_contains(self.MARKER_ENTER):
             log_warn(f"Hook ENTER ya presente en {m.name}; se omite")
             return True
 
         if m.parameters:
-            arg_name = "arg0"
+            arg_name = tag
             arg_desc = m.parameters[0]
             arg_sym = "p0" if m.is_static() else "p1"
         else:
             if m.is_static():
-                arg_name = "null"
+                arg_name = tag
                 arg_desc = None
                 arg_sym = None
             else:
@@ -244,7 +244,7 @@ class HookInjector:
         self.lines[idx + 1:idx + 1] = block
         self._write_registers_to_lines()
 
-        log_ok(f"Hook ENTER inyectado en {m.name} (temps: {temps}, arg: {arg_sym})")
+        log_ok(f"Hook ENTER inyectado en {m.name} (tag: {tag},  temps: {temps}, arg: {arg_sym})")
         return True
 
     def inject_exit(self) -> bool:

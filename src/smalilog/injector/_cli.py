@@ -22,6 +22,7 @@ def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("-v", "--verbose", action="store_true")
 
 
+
 def build_hook_parser(prog: str = "smalilog hook",
                       remote_logger_class: str = "Lcom/deadnote/RemoteLogger;"
                       ) -> argparse.ArgumentParser:
@@ -57,15 +58,30 @@ Ejemplos:
     p = sub.add_parser("analyze", help="Analiza registros y plan de inyección")
     _add_common(p)
 
-    # enter / exit / both / lifecycle
+     # enter — tiene --tag opcional
+    p = sub.add_parser("enter", help="Inyecta hook de entrada")
+    _add_common(p)
+    p.add_argument(
+        "--tag",
+        default="ENTER",
+        metavar="NOMBRE",
+        help='Nombre del hook que se envía al servidor (por defecto: %(default)s)',
+    )
+
+    # _cli.py
+    p = sub.add_parser("exit", help="Inyecta hook de salida")
+    _add_common(p)
+    p.add_argument("--tag", default="EXIT", metavar="NOMBRE",
+                   help='Tag del hook de salida (por defecto: %(default)s)')
+
+    # exit / both / lifecycle — sin tag
     for name, help_ in [
-        ("enter",     "Inyecta hook de entrada"),
-        ("exit",      "Inyecta hook de salida"),
         ("both",      "Inyecta enter + exit"),
         ("lifecycle", "Inyecta LifecycleTracker en Application.onCreate"),
     ]:
         p = sub.add_parser(name, help=help_)
         _add_common(p)
+
 
     # log (antes "d")
     p = sub.add_parser("log", help="Inyecta un log simple tag/mensaje")
@@ -132,11 +148,12 @@ def run_hooker(argv: list[str] | None = None,
         log_error("Método no resuelto")
         return 1
 
-    target = inj.target   # ya es SmaliMethod
+    target = inj.target   
     if args.verbose:
-        analyze_method(target, inj.class_name)
+        # analyze_method(target, inj.class_name, lines=inj.lines)
+        log_info("De....")
     if args.cmd == "analyze":
-        analyze_method(target, inj.class_name)
+        analyze_method(target, inj.class_name, lines=inj.lines)
         return 0
 
     log_info(f"Archivo: {args.file}")
@@ -144,8 +161,11 @@ def run_hooker(argv: list[str] | None = None,
 
     # ---- inyección ----
 
-    if args.cmd == "enter":
-        ok = inj.inject_enter()
+    if args.cmd == "enter" :
+        if args.cmd == "tag":
+           ok = inj.inject_enter(args.tag)
+        else:
+            log_info("Se require" + _c(Color.GREEN, "--tag"))
     elif args.cmd == "exit":
         ok = inj.inject_exit()
     elif args.cmd == "both":
@@ -166,9 +186,6 @@ def run_hooker(argv: list[str] | None = None,
         parser.error(f"subcomando desconocido: {args.cmd}")
         return 2
 
-    if not ok:
-        log_error("No se pudo completar la inyección")
-        return 1
 
     inj.save(output=args.output, backup=not args.no_backup)
     log_ok("Inyección completada")

@@ -19,6 +19,7 @@ def _parse_method_line(line: str):
 def parse_smali_file(content: str):
     lines = content.splitlines()
     methods: list[SmaliMethod] = []
+    
     i = 0
     while i < len(lines):
         stripped = lines[i].strip()
