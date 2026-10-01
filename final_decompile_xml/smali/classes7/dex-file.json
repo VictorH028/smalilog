@@ -1,6 +1,0 @@
-{
-  "version": 35,
-  "markers": [
-    "~~D8{\"backend\":\"dex\",\"compilation-mode\":\"debug\",\"has-checksums\":false,\"min-api\":1,\"sha-1\":\"084a89126ae0596c599143df57a654646af28313\",\"version\":\"9.2.4-dev\"}"
-  ]
-}
