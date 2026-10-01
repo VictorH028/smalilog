@@ -27,7 +27,7 @@ class LogServer:
     ) -> None:
         self.host = host
         self.port = port
-        self.log_file = "log.rxt"
+        self.log_file = log_file
         self.max_headers = max_headers
         self.max_body = max_body
         self.is_running = False
@@ -36,7 +36,7 @@ class LogServer:
 
         self.logger = logging.getLogger("smalilog.LogServer")
         
-        # self.logger.setLevel(log_level)
+        self.logger.setLevel(log_level)
         self.logger.propagate = False
 
         if not self.logger.handlers:
@@ -205,3 +205,4 @@ class LogServer:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2.0)
         print("Servidor detenido")
+

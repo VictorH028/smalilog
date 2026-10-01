@@ -78,3 +78,4 @@ def normalize_reg(reg: str, method: SmaliMethod) -> str:
                     return f"v{start}"
         log_warn(f"p{idx} fuera de rango en {method.name}")
     return reg
+

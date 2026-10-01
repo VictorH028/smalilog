@@ -44,6 +44,10 @@ def parse_smali_file(content: str):
                 j += 1
             if parsed:
                 access, name, signature = parsed
+                # ``.end method`` no implica que exista cuerpo: abstract/native
+                # declarations pueden cerrarse en algunos desensamblados.
+                if any(flag in access.split() for flag in ("abstract", "native")):
+                    has_body = False
                 methods.append(SmaliMethod(
                     name, signature, access, directive, reg_val,
                     start, end, has_body,
@@ -61,3 +65,4 @@ def parse_class_name(content: str) -> str | None:
             if parts:
                 return parts[-1]
     return None
+

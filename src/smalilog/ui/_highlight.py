@@ -109,3 +109,4 @@ def highlight_line(line: str, color: bool = True, style: str = "default") -> str
 
 def has_pygments() -> bool:
     return _HAS_PYGMENTS
+

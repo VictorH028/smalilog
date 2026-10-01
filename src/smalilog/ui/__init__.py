@@ -31,3 +31,4 @@ __all__ = [
     "highlight_line",
     "has_pygments",
 ]
+

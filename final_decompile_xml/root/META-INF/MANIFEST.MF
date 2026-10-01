@@ -1,0 +1,73 @@
+Manifest-Version: 1.0
+Built-By: Signflinger
+Created-By: Android Gradle 8.0.2
+
+Name: AndroidManifest.xml
+SHA-256-Digest: Mh0qkTWoXxg4vLH6QpYseJBIImYNQ4Kmyx47+oNQdnY=
+
+Name: classes7.dex
+SHA-256-Digest: V62AjBLPC/4iqdtvm61361LQo43+fcIWOvkQCplZA+A=
+
+Name: lib/arm64-v8a/liblogger.so
+SHA-256-Digest: GSRqWE/gxVemu/cbYJw7ntKsM/St/hIgKTjijSjnbFo=
+
+Name: res/drawable/fondo_app.jpg
+SHA-256-Digest: igIl9IYk2VFqEzQAqnrbsPyFNyTuH03BOwKi4OCla44=
+
+Name: res/drawable/fondo_oscurecido.xml
+SHA-256-Digest: S6AZLQ07+syibNT5eMZruvoLa4tMYqa/V0caY6aMA8E=
+
+Name: res/layout/activity_main.xml
+SHA-256-Digest: 9ilsthhcmO5wyIJjf7etl+8dGJfmf/HJW+yiVZ6oEZk=
+
+Name: res/mipmap-anydpi-v26/app_img.xml
+SHA-256-Digest: msCHi3gnrSVLdtlIoR4VkC5RaRND0f6XxiI6I6O0r1s=
+
+Name: res/mipmap-hdpi-v4/app_img.png
+SHA-256-Digest: fW/STIC2Eq1650p+osmh3fJJqD++ofFZa70dPjL/PYI=
+
+Name: res/mipmap-hdpi-v4/app_img_adaptive_back.png
+SHA-256-Digest: 7qed9SopOtqABM6/7eq3Wfxk3MSIXHCjIBNR2/JtTFY=
+
+Name: res/mipmap-hdpi-v4/app_img_adaptive_fore.png
+SHA-256-Digest: gq0/V9W1isc4sCQPVESkgsBfwyKq2sx19jQPtdeocjY=
+
+Name: res/mipmap-mdpi-v4/app_img.png
+SHA-256-Digest: fUvGHpZx0zaGOlfpJps0tU8SKwKOzrrkc1gBdsrp/Ms=
+
+Name: res/mipmap-mdpi-v4/app_img_adaptive_back.png
+SHA-256-Digest: FMXDxSmfJBnVLz6zOI587yTP24swYGjq9RK8Z9PT7KU=
+
+Name: res/mipmap-mdpi-v4/app_img_adaptive_fore.png
+SHA-256-Digest: W+SxGzg2/q3IsrXz7OnrTxqVehv9A8NTkWJKOG8k7so=
+
+Name: res/mipmap-xhdpi-v4/app_img.png
+SHA-256-Digest: wZUJyxetsRB0TAEZPjFdHuFt0V7v7zPuLmQrjSqqNmc=
+
+Name: res/mipmap-xhdpi-v4/app_img_adaptive_back.png
+SHA-256-Digest: a+Vic+A2LeteNl9quWGvQ+tosSDM6s20i1+JCiGS0XE=
+
+Name: res/mipmap-xhdpi-v4/app_img_adaptive_fore.png
+SHA-256-Digest: +x2EN9RKZ6LDA848uPqq/iL0y/1WNLTwHUhqr4ANEb0=
+
+Name: res/mipmap-xxhdpi-v4/app_img.png
+SHA-256-Digest: BQ7rkEZS+fZzUO+Bo5U+KxSCb7Z3pPuj44fnlsCYgmE=
+
+Name: res/mipmap-xxhdpi-v4/app_img_adaptive_back.png
+SHA-256-Digest: JnAz7QXUqY8TrmyCGet+5/rYMwn7JD4K5kEeguBr/BQ=
+
+Name: res/mipmap-xxhdpi-v4/app_img_adaptive_fore.png
+SHA-256-Digest: 77NhuWKTet9dudBeOstKhFLILX1f/0Z97mIEV51aW9U=
+
+Name: res/mipmap-xxxhdpi-v4/app_img.png
+SHA-256-Digest: A23DqHONz4lzYKhuYg1q5VplIfGvqWKC8N2SZxXwlBQ=
+
+Name: res/mipmap-xxxhdpi-v4/app_img_adaptive_back.png
+SHA-256-Digest: ZLo+CJzYJF2DOlsM+ceON8HmTyXUrsnNHOSpbyK58jI=
+
+Name: res/mipmap-xxxhdpi-v4/app_img_adaptive_fore.png
+SHA-256-Digest: xl0jMHQ7wMs72pL9U46iy/TsfJrjklO2CdSDtJ/QiHM=
+
+Name: resources.arsc
+SHA-256-Digest: hxevticLpN2S+hxw47TRgDHQjbtsArFBcOxGbA+Tmmg=
+

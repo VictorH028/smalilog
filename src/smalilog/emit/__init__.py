@@ -9,3 +9,4 @@ __all__ = [
         "invoke_static",
         "move_object",
         "move_result_object"]
+

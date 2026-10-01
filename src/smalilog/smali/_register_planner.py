@@ -32,3 +32,4 @@ def plan_hook_registers(method: SmaliMethod, need: int = 2) -> dict:
         "orig_locals": orig_locals,
         "map_p0_to_v": f"v{new_total_regs - param_regs}" if param_regs > 0 else None,
     }
+

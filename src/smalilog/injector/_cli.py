@@ -4,9 +4,9 @@ from __future__ import annotations
 import argparse
 
 from smalilog.smali import analyze_method
-from smalilog.ui import Color, log_error, log_header, log_info, log_ok, log_warn
+from smalilog.ui import Color, log_error, log_header, log_ok, log_warn
 from ._injector import HookInjector
-from smalilog.ui import _c 
+from smalilog.ui import _c
 
 def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("file", help="Archivo Smali a procesar")
@@ -58,7 +58,7 @@ Ejemplos:
     p = sub.add_parser("analyze", help="Analiza registros y plan de inyección")
     _add_common(p)
 
-     # enter — tiene --tag opcional
+    # enter — tiene --tag opcional
     p = sub.add_parser("enter", help="Inyecta hook de entrada")
     _add_common(p)
     p.add_argument(
@@ -160,12 +160,9 @@ def run_hooker(argv: list[str] | None = None,
     log_info(f"Método:  {args.method}{inj.target.signature}")
 
     # ---- inyección ----
-
+    ok = False 
     if args.cmd == "enter" :
-        if args.cmd == "tag":
            ok = inj.inject_enter(args.tag)
-        else:
-            log_info("Se require" + _c(Color.GREEN, "--tag"))
     elif args.cmd == "exit":
         ok = inj.inject_exit()
     elif args.cmd == "both":
@@ -185,8 +182,12 @@ def run_hooker(argv: list[str] | None = None,
     else:
         parser.error(f"subcomando desconocido: {args.cmd}")
         return 2
-
+    
+    if not ok:
+        log_error("La inyección falló")
+        return 1
 
     inj.save(output=args.output, backup=not args.no_backup)
     log_ok("Inyección completada")
     return 0
+

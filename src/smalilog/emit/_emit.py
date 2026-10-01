@@ -63,3 +63,4 @@ def indent(code: str, spaces: int = 4) -> str:
     pad = " " * spaces
     return "\n".join(pad + ln if ln.strip() else ln for ln in code.splitlines())
 
+

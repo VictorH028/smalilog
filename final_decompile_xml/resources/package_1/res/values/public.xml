@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<resources package="com.deadnote" id="0x7f">
+  <public id="0x7f010001" type="drawable" name="fondo_oscurecido" />
+  <public id="0x7f010000" type="drawable" name="fondo_app" />
+  <public id="0x7f020000" type="layout" name="activity_main" />
+  <public id="0x7f030002" type="mipmap" name="app_img_adaptive_fore" />
+  <public id="0x7f030000" type="mipmap" name="app_img" />
+  <public id="0x7f030001" type="mipmap" name="app_img_adaptive_back" />
+  <public id="0x7f040001" type="string" name="text_hello_world" />
+  <public id="0x7f040000" type="string" name="app_name" />
+</resources>

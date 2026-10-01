@@ -40,3 +40,4 @@ def set_use_color(value: bool | None = None) -> bool:
     if value is not None:
         _USE_COLOR = value
     return _USE_COLOR
+

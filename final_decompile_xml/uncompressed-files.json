@@ -1,0 +1,29 @@
+{
+  "extensions": [
+    ".jpg",
+    ".mp3",
+    ".mp4",
+    ".png",
+    ".wav",
+    ".webp"
+  ],
+  "paths": [
+    "res/drawable/fondo_app.jpg",
+    "res/mipmap-hdpi-v4/app_img.png",
+    "res/mipmap-hdpi-v4/app_img_adaptive_back.png",
+    "res/mipmap-hdpi-v4/app_img_adaptive_fore.png",
+    "res/mipmap-mdpi-v4/app_img.png",
+    "res/mipmap-mdpi-v4/app_img_adaptive_back.png",
+    "res/mipmap-mdpi-v4/app_img_adaptive_fore.png",
+    "res/mipmap-xhdpi-v4/app_img.png",
+    "res/mipmap-xhdpi-v4/app_img_adaptive_back.png",
+    "res/mipmap-xhdpi-v4/app_img_adaptive_fore.png",
+    "res/mipmap-xxhdpi-v4/app_img.png",
+    "res/mipmap-xxhdpi-v4/app_img_adaptive_back.png",
+    "res/mipmap-xxhdpi-v4/app_img_adaptive_fore.png",
+    "res/mipmap-xxxhdpi-v4/app_img.png",
+    "res/mipmap-xxxhdpi-v4/app_img_adaptive_back.png",
+    "res/mipmap-xxxhdpi-v4/app_img_adaptive_fore.png",
+    "resources.arsc"
+  ]
+}

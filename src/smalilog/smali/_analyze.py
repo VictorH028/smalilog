@@ -88,3 +88,4 @@ def analyze_method(method: SmaliMethod, class_name: str | None = None,
             span = f"v{start}" if size == 1 else f"v{start}-v{start + 1}"
             print(f"    p{i} → {span:<11} {p}")
     print()
+

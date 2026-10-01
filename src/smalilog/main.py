@@ -265,6 +265,8 @@ def _cmd_server(args: argparse.Namespace) -> int:
             port=args.port,
             max_headers=args.max_headers,
             max_body=args.max_body,
+            log_file=args.log_file,
+            log_level=log_level,
         )
         server.start(blocking=not args.no_blocking)
         if args.no_blocking:
@@ -286,7 +288,7 @@ def _cmd_server(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- #
 #  Entry point
 # --------------------------------------------------------------------------- #
-def cli(argv: list[str] | None = None) -> int:
+def cli(argv: list[str] | None = None) -> int: 
     """
     Punto de entrada del CLI.
 
@@ -299,9 +301,45 @@ def cli(argv: list[str] | None = None) -> int:
     else:
         argv = list(argv)
 
-    # Delegar `hook` completo (con su subparser interno y su propia ayuda).
+    # 1) hook → run_hooker (ya lo tienes)
     if argv and argv[0] == "hook":
         return run_hooker(argv[1:] or ["--help"], prog="smalilog hook")
+
+    # 2) lms → Typer. La ayuda básica no debe exigir dependencias
+    # opcionales (aiosqlite/pydantic) solo para mostrar comandos.
+    if argv and argv[0] == "lms" and len(argv) == 1:
+        print("Uso: smalilog lms <comando> [opciones]")
+        print("\nMini-LMS: consultas, búsqueda y memoria sobre código Smali.")
+        print("\nSubcomandos:")
+        print("  local       Índice y consultas locales")
+        print("  manifest    Consultas de AndroidManifest.xml")
+        print("  mem         Memoria, alias e historial")
+        print("  index       Indexa el workspace mediante MCP")
+        print("  find        Busca símbolos mediante MCP")
+        print("  def         Busca definiciones")
+        print("  xref        Consulta referencias cruzadas")
+        print("  callgraph   Consulta el grafo de llamadas")
+        print("  typehier    Consulta la jerarquía de tipos")
+        print("  strings     Busca literales const-string")
+        print("  stats       Estadísticas del índice")
+        print("\nRequiere las dependencias del proyecto para ejecutar consultas.")
+        return EXIT_OK
+
+    if argv and argv[0] == "lms" and len(argv) == 2 and argv[1] in {"-h", "--help"}:
+        print("Uso: smalilog lms <comando> [opciones]")
+        print("\nUsa 'smalilog lms' para ver el resumen de comandos.")
+        return EXIT_OK
+
+    if argv and argv[0] == "lms":
+        try:
+            from smalilog.lms.commands import app as lms_app
+            lms_app(args=argv[1:] or ["--help"])
+        except SystemExit as exc:
+            return exc.code if isinstance(exc.code, int) else EXIT_OK
+        except Exception as exc:
+            print(f"Error en LMS: {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        return EXIT_OK
 
     # Sin argumentos → menú bonito
     if not argv:
@@ -334,3 +372,4 @@ main = cli
 
 if __name__ == "__main__":
     sys.exit(cli())
+

@@ -43,3 +43,4 @@ def params_raw(signature: str) -> str:
 def return_raw(signature: str) -> str:
     m = re.search(r"\)(.+)$", signature)
     return m.group(1) if m else "V"
+

@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from smalilog.smali import generate_d_log, generate_hook_enter, generate_hook_exit
+from smalilog.smali import generate_hook_enter, generate_hook_exit
 from smalilog.ui import Color, log_error, log_info, log_ok, log_warn
 from smalilog.ui import highlight_line, use_color_default
 from smalilog.smali import plan_hook_registers
@@ -285,7 +285,11 @@ class HookInjector:
                 code = generate_hook_exit(self._method_id(), line, None,
                                           temps, m.return_type,
                                           self.remote_logger_class)
-                self.lines[idx:idx] = ["", code]
+                self.lines[idx:idx] = [
+                    f"    # {self.MARKER_EXIT}",
+                    "",
+                    code,
+                ]
                 count += 1
                 continue
 
@@ -303,7 +307,11 @@ class HookInjector:
             code = generate_hook_exit(self._method_id(), "return" + kind,
                                       reg, temps, m.return_type,
                                       self.remote_logger_class)
-            self.lines[idx:idx] = ["", code]
+            self.lines[idx:idx] = [
+                f"    # {self.MARKER_EXIT}",
+                "",
+                code,
+            ]
             count += 1
 
         self._write_registers_to_lines()
@@ -384,3 +392,4 @@ class HookInjector:
         self.lines[super_idx + 1:super_idx + 1] = block
         log_ok(f"LifecycleTracker.init(p0) inyectado exitosamente en {m.name}")
         return True 
+

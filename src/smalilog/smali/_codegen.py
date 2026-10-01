@@ -88,3 +88,4 @@ def generate_d_log(tag, message, temps, remote_logger_class: str):
         ),
         "# ============================",
     ]))
+
