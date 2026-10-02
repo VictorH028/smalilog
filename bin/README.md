@@ -76,6 +76,13 @@ public class RemoteLogger {
     );
 }
 ```
+# Compilacion 
+
+```
+aarch64-linux-android-clang -fPIC -shared -o liblogger.so native_logger.c \
+  -I/usr/lib/jvm/java-8-openjdk-amd64/include \
+  -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
+```
 
 [RemoteLogger](url) 
 

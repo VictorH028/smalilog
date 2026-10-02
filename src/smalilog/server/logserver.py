@@ -2,28 +2,38 @@
 """
 Servidor TCP/HTTP ligero para recepción y registro de logs en formato JSON.
 
-Este módulo expone la clase LogServer, pensada para ser usada desde el CLI
-(smalilog.main) o programáticamente.
+Acepta objetos sueltos y lotes (listas de objetos), que es lo que envía
+el cliente nativo al agrupar logs.
 """
 
+from __future__ import annotations
+
+import argparse
 import json
 import logging
 import socket
 import threading
+from logging.handlers import RotatingFileHandler
 from typing import Optional
 
 
 class LogServer:
     """Servidor TCP/HTTP ligero para recepción y registro de logs en formato JSON."""
+
     _DEFAULT_MAX_HEADERS = 16 * 1024
     _DEFAULT_MAX_BODY = 1024 * 1024
+    _MAX_BATCH = 100
+    _CLIENT_TIMEOUT = 10.0
+    _ALLOWED_LEVELS = frozenset({"ERROR", "WARNING", "INFO", "DEBUG"})
 
     def __init__(
-            self, 
-            host: str = "127.0.0.1",
-            port: int = 9999,
-            max_headers: int = _DEFAULT_MAX_HEADERS,
-            max_body: int = _DEFAULT_MAX_BODY
+        self,
+        host: str = "127.0.0.1",
+        port: int = 9999,
+        log_file: str = "smalilog.log",
+        log_level: int = logging.INFO,
+        max_headers: int = _DEFAULT_MAX_HEADERS,
+        max_body: int = _DEFAULT_MAX_BODY,
     ) -> None:
         self.host = host
         self.port = port
@@ -33,32 +43,35 @@ class LogServer:
         self.is_running = False
         self._server_socket: Optional[socket.socket] = None
         self._thread: Optional[threading.Thread] = None
+        self._stop_lock = threading.Lock()
 
         self.logger = logging.getLogger("smalilog.LogServer")
-        
         self.logger.setLevel(log_level)
         self.logger.propagate = False
-
         if not self.logger.handlers:
-            handler = logging.FileHandler(self.log_file, encoding="utf-8")
-            formatter = logging.Formatter(
-                "%(asctime)s - %(levelname)s - %(message)s"
+            handler = RotatingFileHandler(
+                log_file,
+                maxBytes=5 * 1024 * 1024,
+                backupCount=3,
+                encoding="utf-8",
             )
-            handler.setFormatter(formatter)
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            )
             self.logger.addHandler(handler)
 
     # ---------------- HTTP helpers ---------------- #
     def _send_response(self, conn: socket.socket, status: str, body: bytes = b"") -> None:
         response = (
             f"HTTP/1.1 {status}\r\n"
-            "Content-Type: text/plain; charset=utf-8\r\n"
+            "Content-Type: application/json; charset=utf-8\r\n"
             f"Content-Length: {len(body)}\r\n"
             "Connection: close\r\n"
             "\r\n"
         ).encode("ascii") + body
         conn.sendall(response)
 
-    def _read_request(self, conn: socket.socket) -> tuple[str, str, bytes]:
+    def _read_request(self, conn: socket.socket) -> bytes:
         data = b""
         while b"\r\n\r\n" not in data:
             chunk = conn.recv(4096)
@@ -90,7 +103,7 @@ class LogServer:
             if ":" not in line:
                 continue
             name, value = line.split(":", 1)
-            if name.lower() == "content-length":
+            if name.strip().lower() == "content-length":
                 try:
                     content_length = int(value.strip())
                 except ValueError:
@@ -110,47 +123,77 @@ class LogServer:
                 raise ValueError("Cuerpo HTTP incompleto")
             body += chunk
 
-        return method, path, body[:content_length]
+        return body[:content_length]
+
+    # ---------------- Registro de entradas ---------------- #
+    @staticmethod
+    def _sanitize(text: str) -> str:
+        """Neutraliza saltos de línea para evitar log forging."""
+        return text.replace("\r", "\\r").replace("\n", "\\n")
+
+    def _normalize_level(self, raw: object) -> str:
+        level = str(raw or "INFO").strip().upper()
+        return level if level in self._ALLOWED_LEVELS else "INFO"
+
+    def _write_entry(self, level: str, entry: str) -> None:
+        write = {
+            "ERROR": self.logger.error,
+            "WARNING": self.logger.warning,
+            "DEBUG": self.logger.debug,
+        }.get(level, self.logger.info)
+        write(entry)
 
     # ---------------- Manejo de cliente ---------------- #
-    def handle_client(self, conn: socket.socket, addr: tuple[str, int]) -> None:
+    def handle_client(self, conn: socket.socket, addr: tuple) -> None:
         try:
-            _, _, body = self._read_request(conn)
-            log_data = json.loads(body.decode("utf-8"))
-            if not isinstance(log_data, dict):
-                raise ValueError("El JSON debe ser un objeto")
+            # Sin esto, un cliente silencioso cuelga el hilo indefinidamente
+            conn.settimeout(self._CLIENT_TIMEOUT)
 
-            level = str(log_data.get("level", "INFO"))[:100]
-            tag = str(log_data.get("tag", "APP"))[:500]
-            message = str(log_data.get("message", ""))[: self._DEFAULT_MAX_BODY]
+            body = self._read_request(conn)
+            payload = json.loads(body.decode("utf-8"))
 
-            log_entry = f"[{tag}] {message}"
+            entries = payload if isinstance(payload, list) else [payload]
+            if not entries or len(entries) > self._MAX_BATCH:
+                raise ValueError("Lote vacío o demasiado grande")
 
-            match level:
-                case "ERROR":
-                    self.logger.error(log_entry)
-                case "WARNING":
-                    self.logger.warning(log_entry)
-                case "DEBUG":
-                    self.logger.debug(log_entry)
-                case _:
-                    self.logger.info(log_entry)
+            logged = 0
+            for item in entries:
+                if not isinstance(item, dict):
+                    raise ValueError("El JSON debe ser un objeto")
+                level = self._normalize_level(item.get("level"))
+                tag = self._sanitize(str(item.get("tag") or "APP"))[:500]
+                message = self._sanitize(str(item.get("message") or ""))[: self.max_body]
+                self._write_entry(level, f"[{tag}] {message}")
+                print(f"[{level}] [{tag}] {message}")
+                logged += 1
 
-            self._send_response(conn, "200 OK", b"OK")
-            print(f"[{level}] [{tag}] {message}")
+            self._send_response(
+                conn, "200 OK",
+                f'{{"status":"ok","logged":{logged}}}'.encode("ascii"),
+            )
 
+        except socket.timeout:
+            self.logger.error("Timeout leyendo de %s", addr)
+            self._safe_reject(conn, "408 Request Timeout")
+        except ValueError as exc:
+            # Incluye json.JSONDecodeError y UnicodeDecodeError
+            self.logger.error("Petición inválida de %s: %s", addr, exc)
+            self._safe_reject(conn, "400 Bad Request")
         except Exception as exc:
+            # Fallo interno (disco, etc.): la culpa no es del cliente
             self.logger.error("Error procesando petición de %s: %s", addr, exc)
-            print(f"Error de {addr}: {exc}")
-            try:
-                self._send_response(conn, "400 Bad Request")
-            except Exception:
-                pass
+            self._safe_reject(conn, "500 Internal Server Error")
         finally:
             try:
                 conn.close()
             except Exception:
                 pass
+
+    def _safe_reject(self, conn: socket.socket, status: str) -> None:
+        try:
+            self._send_response(conn, status, b'{"status":"error"}')
+        except Exception:
+            pass
 
     # ---------------- Ciclo de vida ---------------- #
     def start(self, blocking: bool = True) -> None:
@@ -169,7 +212,6 @@ class LogServer:
             self._server_socket = server
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.settimeout(1.0)
-
             server.bind((self.host, self.port))
             server.listen(5)
 
@@ -182,10 +224,6 @@ class LogServer:
                     continue
                 except OSError:
                     break
-                except Exception as exc:
-                    if self.is_running:
-                        print(f"Error en el loop del servidor: {exc}")
-                    break
 
                 threading.Thread(
                     target=self.handle_client,
@@ -196,13 +234,42 @@ class LogServer:
         self._server_socket = None
 
     def stop(self) -> None:
-        self.is_running = False
-        if self._server_socket is not None:
+        with self._stop_lock:
+            self.is_running = False
+            sock = self._server_socket
+
+        if sock is not None:
             try:
-                self._server_socket.close()
+                sock.close()
             except Exception:
                 pass
+
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2.0)
+
         print("Servidor detenido")
 
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Receptor de logs smalilog")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=9999)
+    parser.add_argument("--log-file", default="smalilog.log")
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    server = LogServer(
+        host=args.host,
+        port=args.port,
+        log_file=args.log_file,
+        log_level=logging.DEBUG if args.debug else logging.INFO,
+    )
+
+    try:
+        server.start(blocking=True)
+    except KeyboardInterrupt:
+        server.stop()
+
+
+if __name__ == "__main__":
+    main()
