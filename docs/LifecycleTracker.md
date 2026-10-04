@@ -26,7 +26,7 @@ public class MyApplication extends Application {
         super.onCreate();
 
         // 1. Configurar servidor de logs
-        RemoteLogger.configure("127.0.0.1", 9999);
+        RemoteLog.configure("127.0.0.1", 9999);
 
         // 2. Activar el seguimiento automático de actividades
         LifecycleTracker.init(this);

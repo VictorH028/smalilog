@@ -1,4 +1,4 @@
-# RemoteLogger — Documentación Técnica
+# RemoteLog — Documentación Técnica
 
 `RemoteLog` es un cliente de depuración **100 % Java** para Android que actúa como interfaz frente a la capa nativa JNI (`smalilog.so`). Permite instrumentar código en tiempo de ejecución, trazar entradas y salidas de funciones, y serializar estructuras de datos complejas sin bloquear el hilo principal (*UI Thread*) y garantizando tolerancia total a fallos.
 
@@ -61,17 +61,17 @@ Ejemplo de integración
 ```java 
 public User processOrder(String orderId, List<Item> items, double discount) throws OrderException {
     // 1. Entrada con captura de ID
-    long traceId = RemoteLogger.traceIn("processOrder", orderId, items, discount);
+    long traceId = RemoteLog.traceIn("processOrder", orderId, items, discount);
     
     try {
         User result = storeService.checkout(orderId, items, discount);
         
         // 2. Salida exitosa correlacionada
-        RemoteLogger.traceOut("processOrder", traceId, result);
+        RemoteLog.traceOut("processOrder", traceId, result);
         return result;
     } catch (OrderException e) {
         // 3. Salida por error correlacionada (Registrado como nivel ERROR)
-        RemoteLogger.traceOutError("processOrder", traceId, e);
+        RemoteLog.traceOutError("processOrder", traceId, e);
         throw e; // La excepción sigue su flujo normal
     }
 }
@@ -103,7 +103,7 @@ public static void logCollection(String tag, Collection<?> items)
 
 Ejemplo de uso
 List<Product> catalog = fetchCatalog();
-RemoteLogger.logList("CatalogDebug", catalog);
+RemoteLog.logList("CatalogDebug", catalog);
 
 
 Ejemplo de salida en el servidor
@@ -168,14 +168,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         // En emulador Android usar "10.0.2.2", en dispositivo físico usar "127.0.0.1" con adb reverse
-        RemoteLogger.configure("127.0.0.1", 9999);
-        RemoteLogger.i("Lifecycle", "MainActivity creada");
+        RemoteLog.configure("127.0.0.1", 9999);
+        RemoteLog.i("Lifecycle", "MainActivity creada");
     }
 
     @Override
     protected void onDestroy() {
-        RemoteLogger.i("Lifecycle", "MainActivity destruida");
-        RemoteLogger.shutdown(); // Flush de la cola de logs nativa
+        RemoteLog.i("Lifecycle", "MainActivity destruida");
+        RemoteLog.shutdown(); // Flush de la cola de logs nativa
         super.onDestroy();
     }
 }
@@ -189,7 +189,7 @@ adb reverse tcp:9999 tcp:9999
 ⚠️ Consideraciones de Seguridad y Producción
 Compilación Condicional: Esta librería no utiliza mecanismos de cifrado ni autenticación. Los logs se transmiten en texto plano. Se recomienda limitar su uso exclusivamente a builds de depuración:
 if (BuildConfig.DEBUG) {
-    RemoteLogger.configure("127.0.0.1", 9999);
+    RemoteLog.configure("127.0.0.1", 9999);
 }
 
 
