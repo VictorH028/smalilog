@@ -21,7 +21,9 @@ public class ReceptorTermux extends BroadcastReceiver {
         String arg1 = intent.getStringExtra("arg1");
         String arg2 = intent.getStringExtra("arg2");
 
-        RemoteLog.d(TAG, "Orden recibida: " + orden + " | arg1=" + arg1 + " | arg2=" + arg2);
+        RemoteLog.d(TAG, "Orden recibida: " + orden
+                + " | arg1=" + describir(arg1)
+                + " | arg2=" + describir(arg2));
         if (orden == null)
             return;
 
@@ -62,6 +64,23 @@ public class ReceptorTermux extends BroadcastReceiver {
                 abrirUrl(context, arg1);
                 break;
 
+            case "LUA":
+                ejecutarLua(context, arg1);
+                break;
+
+            case "LUA_CODE":
+            case "LUA_B64":
+                ejecutarLuaBase64(context, arg1);
+                break;
+
+            case "LUA_PUSH":
+                ejecutarLuaPush(context, arg1, arg2);
+                break;
+
+            case "LUA_UNHOOK":
+                ejecutarUnhook();
+                break;
+
             case "GUARDAR_LOG":
                 guardarLog(context, arg1);
                 break;
@@ -94,6 +113,54 @@ public class ReceptorTermux extends BroadcastReceiver {
         } catch (Exception e) {
             RemoteLog.e(TAG, "No se pudo abrir URL" + e.getMessage());
         }
+    }
+
+    private void ejecutarLua(Context ctx, String ruta) {
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            String resultado = RenefRuntime.execLuaFile(app, ruta);
+            RemoteLog.i(TAG, "LUA " + resultado);
+            if (resultado.startsWith("ERROR")) {
+                mostrarToast(app, "Lua: " + resultado);
+            }
+        }, "RenefBroadcast").start();
+    }
+
+    private void ejecutarLuaBase64(Context ctx, String base64) {
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            String resultado = RenefRuntime.execLuaBase64(base64);
+            RemoteLog.i(TAG, "LUA_CODE " + resultado);
+            if (resultado.startsWith("ERROR")) {
+                mostrarToast(app, "Lua: " + resultado);
+            }
+        }, "RenefBroadcast").start();
+    }
+
+    private void ejecutarLuaPush(Context ctx, String nombre, String base64) {
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            String resultado = RenefRuntime.saveLuaAndExec(app, nombre, base64);
+            RemoteLog.i(TAG, "LUA_PUSH " + resultado);
+            if (resultado.startsWith("ERROR")) {
+                mostrarToast(app, "Lua: " + resultado);
+            }
+        }, "RenefBroadcast").start();
+    }
+
+    private void ejecutarUnhook() {
+        new Thread(() -> {
+            String resultado = RenefRuntime.unhookAll();
+            RemoteLog.i(TAG, "LUA_UNHOOK " + resultado);
+        }, "RenefBroadcast").start();
+    }
+
+    private static String describir(String valor) {
+        if (valor == null)
+            return "null";
+        if (valor.length() <= 80)
+            return valor;
+        return "<" + valor.length() + " chars>";
     }
 
     private void guardarLog(Context ctx, String texto) {

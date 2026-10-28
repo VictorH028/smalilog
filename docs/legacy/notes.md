@@ -1,3 +1,5 @@
+> **Material histórico.** No es documentación vigente; consulta [../README.md](../README.md).
+
 # Instala el paquete localmente en modo editable
 pip install -e .
 

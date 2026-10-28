@@ -19,6 +19,10 @@ def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--no-backup", action="store_true", help="No crear backup")
     p.add_argument("-o", "--output", help="Archivo de salida")
     p.add_argument("-v", "--verbose", action="store_true")
+    p.add_argument(
+        "--logger-class", default="Lcom/deadnote/RemoteLog;",
+        help="Descriptor Smali de la clase logger "
+             "(por defecto: Lcom/deadnote/RemoteLog;)")
 
 
 
@@ -86,7 +90,8 @@ def run_hooker(argv: list[str] | None = None,
     parser = build_hook_parser(prog=prog)
     args = parser.parse_args(argv)
 
-    inj = HookInjector(args.file, remote_logger_class)
+    logger_class = getattr(args, "logger_class", remote_logger_class)
+    inj = HookInjector(args.file, logger_class)
     if not inj.load():
         return 1
 

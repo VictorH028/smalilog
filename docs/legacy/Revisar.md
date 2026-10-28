@@ -1,3 +1,5 @@
+> **Material histórico.** No es documentación vigente; consulta [../README.md](../README.md).
+
 Sí, se puede hacer dentro de la propia aplicación Java, sin Frida ni herramientas externas. La técnica se llama auto-instrumentación (self-instrumentation) o auto-hooking, y funciona porque en Java puedes interceptar llamadas a métodos de reflexión antes de que ocurran, siempre que controles el punto de entrada.
 
 La idea clave: no puedes "hookear" Class.forName directamente (es un método nativo estático), pero sí puedes:

@@ -1,5 +1,6 @@
-README.md
 # Backup
+
+> Clase de la app de prueba `build_payloads`; no forma parte del paquete Python.
 
 Módulo de respaldo (*backup*) del sandbox de la aplicación . Empaqueta
 todo el contenido del directorio privado de la app en un archivo `.tar.gz`

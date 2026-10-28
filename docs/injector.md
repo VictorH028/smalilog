@@ -1,4 +1,9 @@
-# Estructura
+# Inyector Smali (interno)
+
+> Referencia de arquitectura. Para usar la herramienta empieza por la
+> [guía rápida](guia-rapida.md) y la [referencia CLI](cli.md).
+
+## Estructura
 
 ```
 src/smalilog/
@@ -18,6 +23,12 @@ src/smalilog/
 ├── emit/_emit.py             # Helpers de emisión (invoke_static, box_scalar, indent)
 ├── ui/                       # Color, _c, log_*, resaltado (pygments + fallback)
 ├── server/logserver.py       # POST /log
+├── renef/                    # Puente scripts Lua de Renef -> Smali
+│   ├── _lua.py               # Lector de llamadas/literales Lua
+│   ├── _recipe.py            # Clasificación de recetas
+│   ├── _apply.py             # Localización y aplicación en Smali
+│   ├── _cli.py               # smalilog renef parse/apply/presets
+│   └── presets/              # ssl_unpin.lua, root_bypass.lua
 └── lms/                      # Experimental (Typer + MCP, carga perezosa)
 ```
 

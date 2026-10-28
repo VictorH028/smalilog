@@ -10,6 +10,7 @@ from smalilog.smali import (
     generate_d_log_level,
     generate_hook_enter,
     generate_hook_exit,
+    generate_return_stub,
 )
 from smalilog.ui import Color, log_error, log_info, log_ok, log_warn
 from smalilog.ui import highlight_line, use_color_default
@@ -26,6 +27,7 @@ class HookInjector:
     MARKER_ENTER = "Hook ENTER inyectado"
     MARKER_EXIT = "Hook EXIT inyectado"
     MARKER_D = "Log D inyectado"
+    MARKER_STUB = "Renef STUB inyectado"
 
     def __init__(self, file_path, remote_logger_class: str):
         self.original_path = Path(file_path)
@@ -362,6 +364,55 @@ class HookInjector:
         self.lines[idx + 1:idx + 1] = block
         self._write_registers_to_lines()
         log_ok(f"{marker} en {m.name} (tag: {tag!r})")
+        return True
+
+    def inject_stub(self, value=None, label: str | None = None) -> bool:
+        """Inyecta un retorno constante al inicio del método.
+
+        Traduce los casos ``args.skip = true`` y ``onLeave return <literal>``
+        de los scripts Renef a Smali estático (sin necesidad de root).
+        """
+        m = self._require_target()
+        if self._body_contains(self.MARKER_STUB):
+            log_warn(f"{self.MARKER_STUB} ya presente en {m.name}; se omite")
+            return True
+
+        ret = m.return_type
+        if ret == "V":
+            need = 0
+        elif ret in ("J", "D"):
+            need = 2
+        else:
+            need = 1
+
+        temps: list[str] = []
+        if need:
+            planned = self._apply_plan(need=need)
+            if planned is None:
+                return False
+            temps = planned
+
+        if need and self.pending_registers is not None:
+            # Los parámetros se desplazan: actualizamos el modelo antes de
+            # que generate_return_stub use los temporales.
+            m.directive = "registers"
+            m.registers_value = self.pending_registers
+
+        idx = self._find_registers_line()
+        if idx is None:
+            idx = m.start_line
+
+        extra = f" - {label}" if label else ""
+        block = [
+            f"    # {self.MARKER_STUB}{extra} - {_utc_now_iso()}",
+            generate_return_stub(ret, value, temps),
+            "",
+        ]
+        self.lines[idx + 1:idx + 1] = block
+        if need:
+            self._write_registers_to_lines()
+
+        log_ok(f"{self.MARKER_STUB} en {m.name} (retorno: {ret})")
         return True
 
     def inject_both(self) -> bool:

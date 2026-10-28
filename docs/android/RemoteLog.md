@@ -9,7 +9,9 @@ grandes y tolera objetos defectuosos (`toString()` roto, colecciones que
 explotan al iterarse, `null`s por doquier). Si algo falla en el camino, el log
 se pierde silenciosamente — **la aplicación sigue funcionando**.
 
-> 📖 Servidor de recepción y protocolo HTTP: [`server.md`](server.md).
+> 📖 Servidor de recepción y protocolo HTTP: [`../server.md`](../server.md).
+> Esta clase pertenece a la app de prueba `build_payloads`; no forma parte del
+> paquete Python.
 
 ---
 

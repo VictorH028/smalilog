@@ -74,9 +74,22 @@ public class MainActivity extends Activity {
     private void prueba1() {
         RemoteLog.d("bot", "Prueba de botón pulsada");
 
+        // Valores usados por el ejemplo de smalilog renef (docs/renef.md):
+        // el script puede convertir el retorno en false / "parcheado".
+        RemoteLog.d("RenefDemo", "demoRenefCheck=" + demoRenefCheck());
+        RemoteLog.d("RenefDemo", "demoRenefLabel=" + demoRenefLabel());
+
         // Puedes probar trazas o listas para ver la serialización en acción:
         List<String> items = Arrays.asList("Elemento 1", "Elemento 2", "Elemento 3");
         RemoteLog.logList("TestList", items);
+    }
+
+    private boolean demoRenefCheck() {
+        return true;
+    }
+
+    private String demoRenefLabel() {
+        return "original";
     }
 
     private void probarAgente() {

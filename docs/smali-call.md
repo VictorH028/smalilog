@@ -1,3 +1,8 @@
+# Llamadas Smali
+
+> Referencia de sintaxis para editar el Smali que genera o modifica smalilog.
+> Si es tu primera vez, empieza por la [guía rápida](guia-rapida.md).
+
 Para llamar correctamente a métodos u objetos de otros archivos Smali (o cualquier otra actividad), debes tener en cuenta varios aspectos técnicos fundamentales de la MV Dalvik/ART.
 
 1. Tipos de métodos y sus instrucciones de llamada

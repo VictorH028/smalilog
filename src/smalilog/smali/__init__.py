@@ -6,6 +6,7 @@ from ._codegen import (
     generate_d_log_level,
     generate_hook_enter,
     generate_hook_exit,
+    generate_return_stub,
     generate_trace_out_correlated,
     generate_trace_out_error,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "parse_smali_file",
     "generate_hook_enter",
     "generate_hook_exit",
+    "generate_return_stub",
     "generate_trace_out_correlated",
     "generate_d_log_level",
     "generate_trace_out_error",

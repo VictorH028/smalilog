@@ -512,3 +512,14 @@ class TestHookCli:
         content = path.read_text()
         assert MARKER_ENTER in content
         assert MARKER_EXIT in content
+
+    def test_cli_logger_class(self, write_smali):
+        path = write_smali(SAMPLE_INSTANCE_NO_ARGS, name="Logger.smali")
+        rc = run_hooker([
+            "enter", str(path), "-m", "onCreate", "--no-backup",
+            "--logger-class", "Lcom/example/Log;",
+        ])
+        assert rc == 0
+        content = path.read_text()
+        assert "Lcom/example/Log;" in content
+        assert "Lcom/deadnote/RemoteLog;" not in content

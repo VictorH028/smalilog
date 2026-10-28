@@ -31,6 +31,7 @@
 
 - [◈ 01. Estructura](#estructura)
 - [◈ 02. Instalación](#instalacion)
+- [◈ 03. Documentación](#documentación)
 
 ---
 
@@ -47,6 +48,7 @@ smalilog/
 │   ├── emit/                # instrucciones Dalvik/Smali
 │   ├── server/              # receptor HTTP /log
 │   ├── ui/                  # salida de terminal
+│   ├── renef/               # puente scripts Lua de Renef -> Smali
 │   └── lms/                 # consultas/memoria experimental opcional
 ├── tests/
 ├── docs/
@@ -58,6 +60,13 @@ smalilog/
 ```bash
 python -m pip install -e .
 ```
+
+## Documentación
+
+- [Guía rápida para nuevos usuarios](docs/guia-rapida.md)
+- [Índice completo de documentación](docs/README.md)
+- [Referencia de la CLI](docs/cli.md)
+- [Puente Renef → Smali](docs/renef.md)
 
 ## CLI
 
@@ -97,6 +106,32 @@ Los niveles de log disponibles son `debug`, `info`, `warn` y `error`
 (equivalen a `RemoteLog->d/i/w/e`).
 
 `--help` es la fuente práctica de opciones de cada comando.
+
+### Renef sin root
+
+`smalilog renef` traduce un subconjunto de los scripts Lua de
+[Renef](https://renef.io) (hooks Java con `args.skip`/`return` constante y
+observación) a instrumentación Smali estática. Los hooks nativos y las APIs de
+runtime (`Module`, `Memory`, `Syscall`, `Java.use`) se reportan como no
+traducibles porque requieren el agente dinámico de Renef.
+
+```bash
+smalilog renef presets
+smalilog renef parse --preset ssl
+smalilog renef apply --preset ssl --smali-dir ./apk --dry-run
+smalilog renef apply --preset root --smali-dir ./apk
+```
+
+Detalles, matriz de compatibilidad y flujo con `apkeditor`: [`docs/renef.md`](docs/renef.md).
+Hay un ejemplo listo para instalar en `build_payloads/renef_demo.lua`.
+
+`build_payloads` también incluye `libagent.so`, así que la app de prueba puede
+ejecutar Lua en runtime. Con la app en ejecución se envía un script por
+broadcast (`LUA`, `LUA_CODE`/`LUA_B64` o `LUA_PUSH`) y se limpian con
+`LUA_UNHOOK`; ver [`docs/renef.md` §7c](docs/renef.md). APK de trabajo:
+`build_payloads/build/renef_runtime.apk` (copia instalable en
+`/storage/emulated/0/Download/renef_runtime.apk`). Para ver `[RenefDemo]` inicia
+el servidor con `--log-level DEBUG`.
 
 ## LMS experimental
 

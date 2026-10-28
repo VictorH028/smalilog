@@ -1,3 +1,5 @@
+> Clase de la app de prueba `build_payloads`; no forma parte del paquete Python.
+
 Identificar en Smali las llamadas a Class.forName, Method.invoke, getDeclaredMethod, etc.
 
 Reemplazar esas llamadas por llamadas a Lcom/deadnote/Reflect;->forName y Lcom/deadnote/Reflect;->invoke.

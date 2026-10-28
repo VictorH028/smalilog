@@ -1,3 +1,5 @@
+> **Material histórico.** No es documentación vigente; consulta [../README.md](../README.md).
+
 # Analizis estatico 
 > [!NOTE]
 > Casi todas las apk tinen el codigo smali ofuscado 

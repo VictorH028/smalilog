@@ -10,3 +10,6 @@ venv/
 .ruff_cache/
 final_decompile_xml/
 bin/native_lib/*.so
+
+# Clon upstream de Renef (referencia local; no forma parte del paquete)
+/renef/

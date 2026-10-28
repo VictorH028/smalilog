@@ -12,7 +12,7 @@ DEFAULT_LOG_FILE = "app_logs.txt"
 DEFAULT_LOG_LEVEL = "INFO"
 MAX_HEADERS = 16 * 1024
 MAX_BODY = 1024 * 1024
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 class Settings(BaseSettings):

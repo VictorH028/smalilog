@@ -1,4 +1,6 @@
-## 📱 Rastrear Ciclo de Vida de Pantallas (`LifecycleTracker.java`)
+> Clase de la app de prueba `build_payloads`; no forma parte del paquete Python.
+
+# 📱 Rastrear Ciclo de Vida de Pantallas (`LifecycleTracker.java`)
 
 `LifecycleTracker` es una clase auxiliar que se engancha a las llamadas del ciclo de vida de Android (`ActivityLifecycleCallbacks`) para registrar automáticamente cuando una actividad pasa al primer plano, sin requerir cambios en cada pantalla de la app.
 

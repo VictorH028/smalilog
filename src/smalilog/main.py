@@ -71,6 +71,14 @@ _COMMANDS = [
      'smalilog hook info <file> -m <m> --tag T --message MSG', True),
     ("hook lifecycle",  "LifecycleTracker en Application.onCreate.",
      "smalilog hook lifecycle <file> -m onCreate", True),
+
+    # --- renef: puente Lua -> Smali ---
+    ("renef parse",     "Analiza un script Lua de Renef.",
+     "smalilog renef parse --preset ssl", False),
+    ("renef apply",     "Traduce hooks Renef a Smali (sin root).",
+     "smalilog renef apply --preset ssl --smali-dir ./apk", False),
+    ("renef presets",   "Lista los presets Renef incluidos.",
+     "smalilog renef presets", False),
 ]
 
 
@@ -110,7 +118,8 @@ def _print_main_help() -> None:
     for name, _s, example, _h in _COMMANDS:
         print(f"  {_c(_DIM, '$')} {example}")
     print()
-    print(_c(_DIM, "Usa 'smalilog hook <cmd> -h' para ver opciones de un subcomando."))
+    print(_c(_DIM, "Usa 'smalilog hook <cmd> -h' o 'smalilog renef <cmd> -h' "
+            "para ver opciones de un subcomando."))
     print()
 
 
@@ -201,7 +210,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "subcomandos:\n"
             "  server    Arranca el servidor HTTP que recibe los logs.\n"
             "  hook      Inyecta hooks de logging en archivos Smali\n"
-            "            (ver ayuda con: smalilog hook -h)"
+            "            (ver ayuda con: smalilog hook -h)\n"
+            "  renef     Traduce scripts Lua de Renef a Smali sin root\n"
+            "            (ver ayuda con: smalilog renef -h)"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -211,6 +222,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  smalilog hook list app.smali\n"
             "  smalilog hook enter app.smali -m Sf\n"
             "  smalilog hook lifecycle Application.smali -m onCreate\n"
+            "  smalilog renef apply --preset ssl --smali-dir ./apk\n"
         ),
     )
     parser.add_argument("--version", action="version",
@@ -308,7 +320,15 @@ def cli(argv: list[str] | None = None) -> int:
     if argv and argv[0] == "hook":
         return run_hooker(argv[1:] or ["--help"], prog="smalilog hook")
 
-    # 2) lms → Typer. La ayuda básica no debe exigir dependencias
+    # 2) renef → puente estático Lua → Smali.
+    if argv and argv[0] == "renef":
+        from smalilog.renef import run_renef
+        try:
+            return run_renef(argv[1:] or ["--help"], prog="smalilog renef")
+        except SystemExit as exc:
+            return exc.code if isinstance(exc.code, int) else EXIT_OK
+
+    # 3) lms → Typer. La ayuda básica no debe exigir dependencias
     # opcionales (aiosqlite/pydantic) solo para mostrar comandos.
     if argv and argv[0] == "lms" and len(argv) == 1:
         print("Uso: smalilog lms <comando> [opciones]")

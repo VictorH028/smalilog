@@ -1,6 +1,13 @@
 """Generadores de bloques de hook (enter / exit / log)."""
 
-from smalilog.emit import box_scalar, const_null, indent, invoke_static, move_object
+from smalilog.emit import (
+    _regnum,
+    box_scalar,
+    const_null,
+    indent,
+    invoke_static,
+    move_object,
+)
 from ._types import is_reference
 
 
@@ -141,6 +148,77 @@ def generate_d_log_level(level: str, tag: str, message: str, temps,
             f"Ljava/lang/String;Ljava/lang/String;)V",
         ),
         "# ============================",
+    ]))
+
+
+def _smali_int(value: int) -> str:
+    """Formatea un entero como literal hexadecimal de Smali."""
+    if value < 0:
+        return f"-0x{-value:x}"
+    return f"0x{value:x}"
+
+
+def _const_instr(reg: str, value: int) -> str:
+    """Emite la instrucción ``const`` más compacta para un registro."""
+    n = _regnum(reg)
+    if -8 <= value <= 7 and n <= 15:
+        return f"const/4 {reg}, {_smali_int(value)}"
+    if -32768 <= value <= 32767 and n <= 255:
+        return f"const/16 {reg}, {_smali_int(value)}"
+    if -(2 ** 31) <= value < 2 ** 31:
+        return f"const {reg}, {_smali_int(value)}"
+    raise ValueError(f"literal fuera de rango de 32 bits: {value}")
+
+
+def _const_wide_instr(reg: str, value: int) -> str:
+    """Emite la instrucción ``const-wide`` más compacta para un registro."""
+    n = _regnum(reg)
+    if -32768 <= value <= 32767 and n <= 255:
+        return f"const-wide/16 {reg}, {_smali_int(value)}"
+    if -(2 ** 63) <= value < 2 ** 63:
+        return f"const-wide {reg}, {_smali_int(value)}"
+    raise ValueError(f"literal fuera de rango de 64 bits: {value}")
+
+
+def generate_return_stub(return_type: str, value, temps):
+    """Genera un retorno constante al principio de un método.
+
+    Se usa para traducir los ``onLeave return <literal>`` y
+    ``args.skip = true`` de Renef a Smali estático.
+
+    - ``V``: ``return-void`` (ignora ``value``).
+    - ``J``/``D``: ``const-wide`` + ``return-wide``.
+    - Referencia: ``const-string``/``null`` + ``return-object``.
+    - Primitivo: ``const`` + ``return``.
+    """
+    if return_type == "V":
+        return indent("return-void")
+
+    if return_type in ("J", "D"):
+        reg = temps[0]
+        number = 0 if value is None else int(value)
+        return indent("\n".join([
+            _const_wide_instr(reg, number),
+            f"return-wide {reg}",
+        ]))
+
+    if is_reference(return_type):
+        reg = temps[0]
+        if isinstance(value, str):
+            body = [f'const-string {reg}, "{_smali_string(value)}"']
+        else:
+            body = [_const_instr(reg, 0)]
+        body.append(f"return-object {reg}")
+        return indent("\n".join(body))
+
+    reg = temps[0]
+    if isinstance(value, bool):
+        number = 1 if value else 0
+    else:
+        number = 0 if value is None else int(value)
+    return indent("\n".join([
+        _const_instr(reg, number),
+        f"return {reg}",
     ]))
 
 

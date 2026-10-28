@@ -1,3 +1,5 @@
+> **Material histórico.** No es documentación vigente; consulta [../README.md](../README.md).
+
 # Descripción General
 
 ==main.py== es el punto de entrada del CLI de smalilog, herramienta para instrumentar aplicaciones Android con log remoto mediante la combinación:
