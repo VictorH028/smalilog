@@ -89,9 +89,12 @@ smalilog hook analyze app.smali -m onCreate
 smalilog hook enter app.smali -m onCreate
 smalilog hook exit app.smali -m onCreate
 smalilog hook both app.smali -m onCreate
-smalilog hook log app.smali -m onCreate --tag APP --message "hola"
+smalilog hook info app.smali -m onCreate --tag APP --message "hola"
 smalilog hook lifecycle Application.smali -m onCreate
 ```
+
+Los niveles de log disponibles son `debug`, `info`, `warn` y `error`
+(equivalen a `RemoteLog->d/i/w/e`).
 
 `--help` es la fuente práctica de opciones de cada comando.
 
@@ -102,9 +105,11 @@ El subcomando `smalilog lms` se carga de forma diferida y no participa en el arr
 ## Desarrollo
 
 ```bash
+make install   # requerido antes de los tests (instala el paquete en editable)
 make compile
 make test
 make check
+make native    # compila liblogger.so en build_payloads/lib/arm64-v8a/
 ```
 
 El proyecto evita incluir caches, bases de datos, logs y artefactos generados en el repositorio.

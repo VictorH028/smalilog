@@ -76,7 +76,7 @@ def q(
 
       smalilog lms q --returns string --const http
       smalilog lms q --name 'is*' --returns boolean
-      smalilog lms q --calls '*RemoteLogger*' --const SMALILOG_
+      smalilog lms q --calls '*RemoteLog*' --const SMALILOG_
     """
     idx = _load_index(rebuild=rebuild)
 

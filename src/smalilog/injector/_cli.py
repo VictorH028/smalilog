@@ -4,9 +4,8 @@ from __future__ import annotations
 import argparse
 
 from smalilog.smali import analyze_method
-from smalilog.ui import Color, log_error, log_header, log_ok, log_warn
+from smalilog.ui import Color, log_error, log_header, log_ok, log_warn, _c, log_info
 from ._injector import HookInjector
-from smalilog.ui import _c
 
 def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("file", help="Archivo Smali a procesar")
@@ -23,9 +22,7 @@ def _add_common(p: argparse.ArgumentParser) -> None:
 
 
 
-def build_hook_parser(prog: str = "smalilog hook",
-                      remote_logger_class: str = "Lcom/deadnote/RemoteLogger;"
-                      ) -> argparse.ArgumentParser:
+def build_hook_parser(prog: str = "smalilog hook") -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog,
         description="Inyecta hooks de observación en archivos Smali.",
@@ -38,7 +35,7 @@ Ejemplos:
   smalilog hook enter      app.smali -m Sf
   smalilog hook exit       app.smali -m Sf
   smalilog hook both       app.smali -m Sf
-  smalilog hook log        app.smali -m Sf --tag APP --message "hola"
+  smalilog hook info       app.smali -m Sf --tag APP --message "hola"
   smalilog hook lifecycle  Application.smali -m onCreate
 """,
     )
@@ -58,23 +55,13 @@ Ejemplos:
     p = sub.add_parser("analyze", help="Analiza registros y plan de inyección")
     _add_common(p)
 
-    # enter — tiene --tag opcional
+    # enter / exit
     p = sub.add_parser("enter", help="Inyecta hook de entrada")
     _add_common(p)
-    p.add_argument(
-        "--tag",
-        default="ENTER",
-        metavar="NOMBRE",
-        help='Nombre del hook que se envía al servidor (por defecto: %(default)s)',
-    )
-
-    # _cli.py
     p = sub.add_parser("exit", help="Inyecta hook de salida")
     _add_common(p)
-    p.add_argument("--tag", default="EXIT", metavar="NOMBRE",
-                   help='Tag del hook de salida (por defecto: %(default)s)')
 
-    # exit / both / lifecycle — sin tag
+    # both / lifecycle
     for name, help_ in [
         ("both",      "Inyecta enter + exit"),
         ("lifecycle", "Inyecta LifecycleTracker en Application.onCreate"),
@@ -82,23 +69,21 @@ Ejemplos:
         p = sub.add_parser(name, help=help_)
         _add_common(p)
 
-
-    # log (antes "d")
-    p = sub.add_parser("log", help="Inyecta un log simple tag/mensaje")
-    _add_common(p)
-    p.add_argument("--tag", default="LOG")
-    p.add_argument("--message", "--msg", dest="message",
-                   default="Mensaje de log")
+    # Niveles d/i/w/e de RemoteLog.
+    for lvl in ("debug", "info", "warn", "error"):
+        p = sub.add_parser(lvl, help=f"Log nivel {lvl.upper()}")
+        _add_common(p)
+        p.add_argument("--tag", default="APP")
+        p.add_argument("--message", "--msg", dest="message", default="")
 
     return parser
 
 
 def run_hooker(argv: list[str] | None = None,
                prog: str = "smalilog hook",
-               remote_logger_class: str = "Lcom/deadnote/RemoteLogger;"
+               remote_logger_class: str = "Lcom/deadnote/RemoteLog;"
                ) -> int:
-    parser = build_hook_parser(prog=prog,
-                               remote_logger_class=remote_logger_class)
+    parser = build_hook_parser(prog=prog)
     args = parser.parse_args(argv)
 
     inj = HookInjector(args.file, remote_logger_class)
@@ -148,41 +133,33 @@ def run_hooker(argv: list[str] | None = None,
         log_error("Método no resuelto")
         return 1
 
-    target = inj.target   
-    if args.verbose:
-        # analyze_method(target, inj.class_name, lines=inj.lines)
-        log_info("De....")
+    target = inj.target
     if args.cmd == "analyze":
         analyze_method(target, inj.class_name, lines=inj.lines)
         return 0
 
     log_info(f"Archivo: {args.file}")
     log_info(f"Método:  {args.method}{inj.target.signature}")
+    if args.verbose:
+        log_info(f"Clase: {inj.class_name} · regs: {target.total_regs} · "
+                 f"params: {len(target.parameters)}")
 
     # ---- inyección ----
-    ok = False 
-    if args.cmd == "enter" :
-           ok = inj.inject_enter(args.tag)
+    ok = False
+    if args.cmd == "enter":
+        ok = inj.inject_enter()
     elif args.cmd == "exit":
         ok = inj.inject_exit()
     elif args.cmd == "both":
-        log_info("Por ahora no disponible...")
-        # ok_e = inj.inject_enter()
-        # ok_x = inj.inject_exit()
-        # ok = ok_e and ok_x
-        # if not ok and (ok_e or ok_x):
-        #     log_warn("Inyección parcial")
-        return 1
-    elif args.cmd == "log":
-        # ok = inj.inject_d(args.tag, args.message)
-        log_info("Por ahora no disponible...")
-        return 1
+        ok = inj.inject_both()
+    elif args.cmd in ("debug", "info", "warn", "error"):
+        ok = inj.inject_log_level(args.cmd, args.tag, args.message)
     elif args.cmd == "lifecycle":
         ok = inj.inject_lifecycle_tracker()
     else:
         parser.error(f"subcomando desconocido: {args.cmd}")
         return 2
-    
+
     if not ok:
         log_error("La inyección falló")
         return 1

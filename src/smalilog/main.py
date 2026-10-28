@@ -67,8 +67,8 @@ _COMMANDS = [
      "smalilog hook exit <file> -m <m>", True),
     ("hook both",       "Inyecta enter + exit.",
      "smalilog hook both <file> -m <m>", True),
-    ("hook log",        "Inyecta un log tag/mensaje.",
-     'smalilog hook log <file> -m <m> --tag T --message MSG', True),
+    ("hook debug|info|warn|error", "Inyecta un log de nivel (d/i/w/e).",
+     'smalilog hook info <file> -m <m> --tag T --message MSG', True),
     ("hook lifecycle",  "LifecycleTracker en Application.onCreate.",
      "smalilog hook lifecycle <file> -m onCreate", True),
 ]
@@ -87,15 +87,18 @@ def _print_main_help() -> None:
     print()
     print(_c(_BOLD, "Comandos:"))
 
-    # Ancho para alinear la segunda columna
-    width = max(len(name) for name, *_ in _COMMANDS) + 2
+    # Ancho visible: el prefijo del árbol ("  └─ ") cuenta para alinear.
+    hook_prefix = "  └─ "
+    width = max(len(name) + (len(hook_prefix) if is_hook else 0)
+                for name, *_rest, is_hook in _COMMANDS) + 2
 
     for name, summary, _example, is_hook in _COMMANDS:
         if is_hook:
             label = "  " + _c(_DIM, "└─ ") + _c(_GREEN, name)
         else:
             label = _c(_CYAN, name)
-        pad = " " * (width - len(name))
+        visible = len(name) + (len(hook_prefix) if is_hook else 0)
+        pad = " " * (width - visible)
         print(f"  {label}{pad}{summary}")
 
     print()

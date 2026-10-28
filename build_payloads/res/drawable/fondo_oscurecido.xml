@@ -1,0 +1,15 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Capa 1: Imagen de fondo -->
+    <item>
+        <bitmap
+            android:src="@drawable/fondo_app"
+            android:gravity="fill"/>
+    </item>
+    
+    <!-- Capa 2: Superposición oscura (ajusta alpha para cambiar intensidad) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#80000000"/> <!-- 50% opacidad negro -->
+        </shape>
+    </item>
+</layer-list>

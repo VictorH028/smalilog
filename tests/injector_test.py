@@ -2,7 +2,7 @@
 Tests del HookInjector.
 
 Ejecuta:
-    pytest -q src/smalilog/tests/injector_test.py
+    pytest -q tests/injector_test.py
 """
 from __future__ import annotations
 
@@ -11,10 +11,11 @@ from pathlib import Path
 
 import pytest
 
+from smalilog.injector._cli import run_hooker
 from smalilog.injector._injector import HookInjector
 
 
-REMOTE_LOGGER = "Lcom/deadnote/RemoteLogger;"
+REMOTE_LOGGER = "Lcom/deadnote/RemoteLog;"
 MARKER_ENTER = "Hook ENTER inyectado"
 MARKER_EXIT = "Hook EXIT inyectado"
 
@@ -213,41 +214,40 @@ class TestResolveMethod:
 # --------------------------------------------------------------------------- #
 class TestInjectEnter:
     def test_enter_static_ref_arg(self, make_injector):
-        """Arg de referencia: 2 temps, no boxing, arg_sym=p0."""
+        """Arg de referencia: 3 temps (nombre, array e índice), sin boxing."""
         inj = make_injector(SAMPLE_STATIC_VOID, method="isPremium")
         before = _registers_value(inj)
         assert inj.inject_enter()
 
         assert _has_hook_enter(inj)
-        assert _registers_value(inj) == before + 2
-        # El invoke usa p0 (el objeto original)
+        assert _registers_value(inj) == before + 3
         body = _body_text(inj)
         assert "invoke-static" in body
-        assert "hookEnter" in body
+        assert "traceIn" in body
+        assert "new-array" in body
         # No debe haber move-result-object (no hay boxing)
         assert "move-result-object" not in body
 
     def test_enter_instance_no_args(self, make_injector):
-        """Sin args y no estático: arg_sym=p0, arg_name=this, no boxing."""
+        """Sin args y no estático: 3 temps (se pasa 'this')."""
         inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
         before = _registers_value(inj)
         assert inj.inject_enter()
 
         assert _has_hook_enter(inj)
-        assert _registers_value(inj) == before + 2
+        assert _registers_value(inj) == before + 3
 
     def test_enter_static_no_args(self, make_injector):
-        """Sin args y estático: arg_desc=None → necesita boxing (null)."""
+        """Sin args y estático: arg_desc=None → 2 temps (null en el array)."""
         inj = make_injector(SAMPLE_STATIC_NO_ARGS, method="foo")
         before = _registers_value(inj)
         assert inj.inject_enter()
 
         assert _has_hook_enter(inj)
-        # 3 temps por boxing de null
-        assert _registers_value(inj) == before + 3
+        assert _registers_value(inj) == before + 2
 
     def test_enter_primitive_arg_boxes(self, make_injector):
-        """Arg primitivo (I): boxing → 3 temps."""
+        """Arg primitivo (I): boxing → 4 temps (índice y valor boxeado)."""
         inj = make_injector(
             """.class public Lcom/example/App;
 .method public static f(I)V
@@ -259,14 +259,17 @@ class TestInjectEnter:
         )
         before = _registers_value(inj)
         assert inj.inject_enter()
-        assert _registers_value(inj) == before + 3
+        assert _registers_value(inj) == before + 4
+        body = _body_text(inj)
+        assert "valueOf" in body
+        assert "move-result-object" in body
 
     def test_enter_wide_arg(self, make_injector):
-        """J ocupa 2 registros; aun así boxing → 3 temps."""
+        """J ocupa 2 registros; aun así boxing → 4 temps."""
         inj = make_injector(SAMPLE_WIDE_PARAM, method="qux")
         before = _registers_value(inj)
         assert inj.inject_enter()
-        assert _registers_value(inj) == before + 3
+        assert _registers_value(inj) == before + 4
 
     def test_enter_idempotent(self, make_injector):
         inj = make_injector(SAMPLE_STATIC_VOID, method="isPremium")
@@ -274,30 +277,31 @@ class TestInjectEnter:
         regs_after_first = _registers_value(inj)
         assert inj.inject_enter() is True      # no falla
         assert _registers_value(inj) == regs_after_first
-        assert _count_invoke(inj, "hookEnter") == 1
+        assert _count_invoke(inj, "traceIn") == 1
 
     def test_enter_locals_directive(self, make_injector):
-        """.locals N → el nuevo .locals debe ser N+need, sin tocar params."""
+        """.locals N → el nuevo .registers debe ser N+need+params."""
         inj = make_injector(SAMPLE_LOCALS_DIRECTIVE, method="bar")
         before = _registers_value(inj)       # N = 2
         assert inj.inject_enter()
         # Se convierte a .registers (el planner lo hace así)
-        assert _registers_value(inj) == before + 3 + 1  # 3 temps + 1 parameter register
+        assert _registers_value(inj) == before + 4 + 1  # 4 temps + 1 parámetro
 
     def test_enter_temps_dont_clobber_params(self, make_injector):
-        """Los temps frescos no deben coincidir con p0 tras expandir."""
+        """Los temporales inyectados quedan por debajo de los parámetros."""
         inj = make_injector(SAMPLE_STATIC_VOID, method="isPremium")
         assert inj.inject_enter()
         m = inj.target
         assert m is not None
-        # p0 = último registro tras expandir
         p0_reg = _registers_value(inj) - 1
-        # Los const-string del hook usan temps frescos ≠ p0
-        for ln in inj.lines:
-            if "const-string" in ln and "arg" in ln:
-                reg = re.search(r"const-string (v\d+)", ln)
-                if reg:
-                    assert int(reg.group(1)[1:]) != p0_reg
+        hook_lines = "\n".join(
+            ln for ln in inj.lines
+            if any(k in ln for k in
+                   ("const-string", "new-array", "aput-object", "invoke-static"))
+        )
+        used = {int(n) for n in re.findall(r"\bv(\d+)", hook_lines)}
+        assert used
+        assert max(used) < p0_reg
 
 
 # --------------------------------------------------------------------------- #
@@ -347,8 +351,8 @@ class TestInjectExit:
         )
         assert inj.inject_exit()
         assert inj.lines.count("    return v0") == 2  # se preservan
-        # Debe haber al menos 2 invokes a hookExit
-        assert _count_invoke(inj, "hookExit") >= 2
+        # Debe haber al menos 2 invokes a traceOut (incluye traceOutVoid)
+        assert _count_invoke(inj, "traceOut") >= 2
 
 
 # --------------------------------------------------------------------------- #
@@ -435,3 +439,76 @@ class TestShow:
         inj.show_method(color=False)
         out = capsys.readouterr().out
         assert "bloque(s) inyectado(s)" in out
+
+
+# --------------------------------------------------------------------------- #
+#  log d/i/w/e y combinado
+# --------------------------------------------------------------------------- #
+class TestInjectLog:
+    def test_inject_info(self, make_injector):
+        inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
+        before = _registers_value(inj)
+        assert inj.inject_log_level("info", "APP", "hola")
+
+        assert _registers_value(inj) == before + 2
+        body = _body_text(inj)
+        assert "->i(Ljava/lang/String;Ljava/lang/String;)V" in body
+        assert "Log I inyectado" in "\n".join(inj.lines)
+
+    def test_inject_level_alias(self, make_injector):
+        inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
+        assert inj.inject_log_level("w", "APP", "x")
+        assert "->w(" in _body_text(inj)
+
+    def test_inject_level_invalid(self, make_injector):
+        inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
+        assert inj.inject_log_level("verbose", "APP", "x") is False
+
+    def test_log_idempotent(self, make_injector):
+        inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
+        assert inj.inject_log_level("warn", "APP", "x")
+        regs = _registers_value(inj)
+        assert inj.inject_log_level("warn", "APP", "x")
+        assert _registers_value(inj) == regs
+        assert _count_invoke(inj, "->w(") == 1
+
+    def test_log_escapes_literals(self, make_injector):
+        inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
+        assert inj.inject_log_level("error", 'A"B', "linea\nnueva")
+        joined = "\n".join(inj.lines)
+        assert '\\"B' in joined
+        assert "linea\\nnueva" in joined
+
+    def test_inject_both(self, make_injector):
+        inj = make_injector(SAMPLE_INSTANCE_NO_ARGS, method="onCreate")
+        before = _registers_value(inj)
+        assert inj.inject_both()
+
+        assert _has_hook_enter(inj)
+        assert _has_hook_exit(inj)
+        assert _count_invoke(inj, "traceIn") == 1
+        assert _count_invoke(inj, "traceOut") == 1
+        # enter (3 temps) define el crecimiento; exit reutiliza 2.
+        assert _registers_value(inj) == before + 3
+
+
+# --------------------------------------------------------------------------- #
+#  CLI del hook (integración mínima)
+# --------------------------------------------------------------------------- #
+class TestHookCli:
+    def test_cli_info_injects(self, write_smali):
+        path = write_smali(SAMPLE_INSTANCE_NO_ARGS, name="App.smali")
+        rc = run_hooker([
+            "info", str(path), "-m", "onCreate",
+            "--tag", "APP", "--message", "hola",
+        ])
+        assert rc == 0
+        assert "->i(" in path.read_text()
+
+    def test_cli_both_injects(self, write_smali):
+        path = write_smali(SAMPLE_INSTANCE_NO_ARGS, name="Both.smali")
+        rc = run_hooker(["both", str(path), "-m", "onCreate", "--no-backup"])
+        assert rc == 0
+        content = path.read_text()
+        assert MARKER_ENTER in content
+        assert MARKER_EXIT in content

@@ -1,32 +1,37 @@
-# Estructuta 
+# Estructura
 
 ```
-injector/
-├── __init__.py
-├── hooker.py                 # Fachada pública + run_hooker (CLI entry)
-├── _colors.py                # Color, _c, _USE_COLOR, log_*
-├── _highlight.py             # Resaltado de sintaxis (pygments + fallback)
-├── _smali_types.py           # Tipos, parse_type_list, _type_size, etc.
-├── _smali_model.py           # SmaliMethod, count_parameter_registers, normalize_reg
-├── _smali_parser.py          # parse_smali_file, _parse_method_line, parse_class_name
-├── _register_planner.py      # plan_hook_registers
-├── _emit.py                  # Helpers de emisión (_invoke_static, _move_object, _box_scalar, indent)
-├── _codegen.py               # generate_hook_enter / exit / d_log
-├── _injector.py              # HookInjector
-├── _analyze.py               # analyze_method
-└── _cli.py                   # build_hook_parser, run_hooker, show_method_source
+src/smalilog/
+├── main.py                   # CLI principal (server + menú de hooks)
+├── config.py                 # Defaults del servidor y Settings de lms
+├── injector/
+│   ├── hooker.py             # Fachada pública (re-exporta e inicia run_hooker)
+│   ├── _cli.py               # build_hook_parser, run_hooker
+│   └── _injector.py          # HookInjector
+├── smali/
+│   ├── _types.py             # Tipos, parse_type_list, is_reference
+│   ├── _model.py             # SmaliMethod, count_parameter_registers, normalize_reg
+│   ├── _parser.py            # parse_smali_file, parse_class_name
+│   ├── _register_planner.py  # plan_hook_registers
+│   ├── _codegen.py           # generate_hook_enter / exit / d_log_level
+│   └── _analyze.py           # analyze_method
+├── emit/_emit.py             # Helpers de emisión (invoke_static, box_scalar, indent)
+├── ui/                       # Color, _c, log_*, resaltado (pygments + fallback)
+├── server/logserver.py       # POST /log
+└── lms/                      # Experimental (Typer + MCP, carga perezosa)
 ```
 
-# Estructura interativa 
+# Estructura interactiva
 ```mermaid
 flowchart LR
+    main.py --> _cli.py
     hooker.py --> _cli.py
-    hooker.py --> _injector.py
+    _cli.py --> _injector.py
     _injector.py --> _codegen.py
     _injector.py --> _register_planner.py
-    _injector.py --> _smali_parser.py
+    _injector.py --> _parser.py
     _codegen.py --> _emit.py
-    _emit.py --> _smali_types.py
+    _emit.py --> _types.py
 ```
 
 # Nevo 

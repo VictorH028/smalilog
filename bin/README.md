@@ -46,11 +46,12 @@ Connection: close
 
 # Función JNI Pública 
 
-`Java_com_deadnote_RemoteLogger_nativeSendLog`
+`Java_com_deadnote_RemoteLog_nativeSendLog` (y `nativeConfigure`,
+`nativeShutdown`, `nativeGetDroppedCount` en la misma clase).
 
 ```c
 JNIEXPORT void JNICALL
-Java_com_deadnote_RemoteLogger_nativeSendLog(
+Java_com_deadnote_RemoteLog_nativeSendLog(
     JNIEnv *env,
     jclass clazz,
     jstring jlevel,
@@ -64,30 +65,38 @@ Firma en Java
 ```java
 package com.deadnote;
 
-public class RemoteLogger {
+public final class RemoteLog {
     static {
-        System.loadLibrary("native_logger");
+        System.loadLibrary("logger");
     }
 
-    public static native void nativeSendLog(
+    private static native void nativeSendLog(
         String level,
         String tag,
         String message
     );
 }
 ```
-# Compilacion 
+
+# Compilación
+
+Desde la raíz del repo (usa las cabeceras de OpenJDK de Termux):
 
 ```
-aarch64-linux-android-clang -fPIC -shared -o liblogger.so native_logger.c \
-  -I/usr/lib/jvm/java-8-openjdk-amd64/include \
-  -I/usr/lib/jvm/java-8-openjdk-amd64/include/linux
+make native                 # salida: build_payloads/lib/arm64-v8a/liblogger.so
 ```
 
-[RemoteLogger](url) 
+Equivalente manual:
+
+```
+aarch64-linux-android-clang -O2 -fPIC -shared -Wall -o liblogger.so native_logger.c \
+  -I$PREFIX/lib/jvm/java-21-openjdk/include \
+  -I$PREFIX/lib/jvm/java-21-openjdk/include/linux
+```
 
 > [!WARNING]
-> El nombre debe coincidir exactamente: paquete com.deadnote, clase RemoteLogger, método nativeSendLog.
+> El nombre debe coincidir exactamente: paquete `com.deadnote`, clase `RemoteLog`
+> y método `nativeSendLog`. `System.loadLibrary("logger")` busca `liblogger.so`.
 
 
 # Referencia

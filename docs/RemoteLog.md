@@ -1,6 +1,6 @@
 # RemoteLog
 
-Logger remoto para Android con **envío asíncrono a un servidor `smalilog`**,
+Log remoto para Android con **envío asíncrono a un servidor `smalilog`**,
 implementado como un wrapper Java sobre una librería nativa (`liblogger.so`).
 
 Está diseñado para ser **completamente seguro para producción**: nunca lanza
@@ -9,7 +9,7 @@ grandes y tolera objetos defectuosos (`toString()` roto, colecciones que
 explotan al iterarse, `null`s por doquier). Si algo falla en el camino, el log
 se pierde silenciosamente — **la aplicación sigue funcionando**.
 
-> 📖 Documentación extendida del formato de serialización: `RemoteLogger.md`
+> 📖 Servidor de recepción y protocolo HTTP: [`server.md`](server.md).
 
 ---
 
@@ -40,8 +40,7 @@ se pierde silenciosamente — **la aplicación sigue funcionando**.
 ```
 
 com/deadnote/
-├── RemoteLog.java     ← este archivo (API pública + serialización)
-└── RemoteLogger.md    ← documentación del formato y protocolo
+└── RemoteLog.java     ← este archivo (API pública + serialización)
 
 libs/
 └── <abi>/liblogger.so ← librería nativa (una por ABI)
@@ -54,8 +53,7 @@ libs/
 
 ### 1. Copiar el código
 
-Coloca `RemoteLog.java` en tu paquete (por defecto `com.deadnote`) y
-`RemoteLogger.md` junto a él si quieres conservar la documentación.
+Coloca `RemoteLog.java` en tu paquete (por defecto `com.deadnote`).
 
 ### 2. Incluir la librería nativa
 

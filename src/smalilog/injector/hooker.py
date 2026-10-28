@@ -11,7 +11,6 @@ from smalilog.smali import (
     SmaliMethod,
     analyze_method,
     count_parameter_registers,
-    generate_d_log,
     generate_hook_enter,
     generate_hook_exit,
     normalize_reg,
@@ -25,7 +24,7 @@ from smalilog.ui import Color
 from ._cli import build_hook_parser, run_hooker
 from ._injector import HookInjector
 
-REMOTE_LOGGER_CLASS = "Lcom/deadnote/RemoteLogger;"
+REMOTE_LOGGER_CLASS = "Lcom/deadnote/RemoteLog;"
 
 __all__ = [
     "REMOTE_LOGGER_CLASS",
@@ -35,7 +34,6 @@ __all__ = [
     "analyze_method",
     "build_hook_parser",
     "count_parameter_registers",
-    "generate_d_log",
     "generate_hook_enter",
     "generate_hook_exit",
     "normalize_reg",

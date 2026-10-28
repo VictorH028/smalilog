@@ -6,7 +6,11 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from smalilog.smali import generate_hook_enter, generate_hook_exit
+from smalilog.smali import (
+    generate_d_log_level,
+    generate_hook_enter,
+    generate_hook_exit,
+)
 from smalilog.ui import Color, log_error, log_info, log_ok, log_warn
 from smalilog.ui import highlight_line, use_color_default
 from smalilog.smali import plan_hook_registers
@@ -45,7 +49,7 @@ class HookInjector:
         return True
     
     def _require_target(self) -> SmaliMethod:
-        """Devuelve self._require_target() garantizando que no es None."""
+        """Devuelve el método resuelto o falla si aún no hay uno."""
         if self.target is None:
             raise RuntimeError(
                 "HookInjector: no hay método resuelto. "
@@ -203,28 +207,30 @@ class HookInjector:
 
     # ---------- inyección ----------
 
-    def inject_enter(self, tag: str = "ENTER"  ) -> bool:
+    def inject_enter(self) -> bool:
         m = self._require_target()
         if self._body_contains(self.MARKER_ENTER):
             log_warn(f"Hook ENTER ya presente en {m.name}; se omite")
             return True
 
         if m.parameters:
-            arg_name = tag
             arg_desc = m.parameters[0]
             arg_sym = "p0" if m.is_static() else "p1"
         else:
             if m.is_static():
-                arg_name = tag
                 arg_desc = None
                 arg_sym = None
             else:
-                arg_name = "this"
                 arg_desc = self.class_name or "Ljava/lang/Object;"
                 arg_sym = "p0"
 
-        needs_boxing = (arg_desc is None) or (not is_reference(arg_desc))
-        needed_temps = 3 if needs_boxing else 2
+        # 2 = nombre + array; 3 = + índice (referencia); 4 = + valor boxeado.
+        if arg_desc is None:
+            needed_temps = 2
+        elif is_reference(arg_desc):
+            needed_temps = 3
+        else:
+            needed_temps = 4
 
         temps = self._apply_plan(need=needed_temps)
         if temps is None:
@@ -236,15 +242,14 @@ class HookInjector:
 
         block = [
             f"    # {self.MARKER_ENTER} - {_utc_now_iso()}",
-            generate_hook_enter(self._method_id(), arg_name,
-                                arg_desc, arg_sym, temps,
+            generate_hook_enter(self._method_id(), arg_desc, arg_sym, temps,
                                 self.remote_logger_class),
             "",
         ]
         self.lines[idx + 1:idx + 1] = block
         self._write_registers_to_lines()
 
-        log_ok(f"Hook ENTER inyectado en {m.name} (tag: {tag},  temps: {temps}, arg: {arg_sym})")
+        log_ok(f"Hook ENTER inyectado en {m.name} (temps: {temps}, arg: {arg_sym})")
         return True
 
     def inject_exit(self) -> bool:
@@ -317,7 +322,57 @@ class HookInjector:
         self._write_registers_to_lines()
         log_ok(f"Hook EXIT inyectado en {m.name} ({count} returns, temps: {temps})")
         return True
-        
+
+    # Código de nivel que espera RemoteLog->d/i/w/e.
+    _LOG_LEVELS = {
+        "debug": "d", "d": "d",
+        "info": "i", "i": "i",
+        "warn": "w", "warning": "w", "w": "w",
+        "error": "e", "e": "e",
+    }
+
+    def inject_log_level(self, level: str, tag: str, message: str) -> bool:
+        """Inyecta una llamada ``RemoteLog->d/i/w/e(tag, message)``."""
+        code = self._LOG_LEVELS.get(str(level).lower())
+        if code is None:
+            log_error(f"Nivel de log inválido: {level!r} "
+                      f"(usa debug/info/warn/error)")
+            return False
+
+        m = self._require_target()
+        marker = f"Log {code.upper()} inyectado"
+        if self._body_contains(marker):
+            log_warn(f"{marker} ya presente en {m.name}; se omite")
+            return True
+
+        temps = self._apply_plan(need=2)
+        if temps is None:
+            return False
+
+        idx = self._find_registers_line()
+        if idx is None:
+            idx = m.start_line
+
+        block = [
+            f"    # {marker} - {_utc_now_iso()}",
+            generate_d_log_level(code, tag, message, temps,
+                                 self.remote_logger_class),
+            "",
+        ]
+        self.lines[idx + 1:idx + 1] = block
+        self._write_registers_to_lines()
+        log_ok(f"{marker} en {m.name} (tag: {tag!r})")
+        return True
+
+    def inject_both(self) -> bool:
+        """Inyecta el hook de entrada y el de salida en una sola pasada."""
+        ok_enter = self.inject_enter()
+        ok_exit = self.inject_exit()
+        if ok_enter and ok_exit:
+            return True
+        log_warn("Inyección parcial: revisa los hooks generados")
+        return False
+
     def save(self, output: str | None = None, backup: bool = True) -> None:
         self._write_registers_to_lines()
         out_path = Path(output) if output else self.original_path

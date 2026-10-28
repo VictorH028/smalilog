@@ -22,7 +22,7 @@ smalilog
     ├── enter                      Hook de entrada
     ├── exit                       Hook de salida
     ├── both                       Hook de entrada + salida
-    ├── log                        Log con tag/mensaje personalizado
+    ├── debug|info|warn|error      Log de nivel con tag/mensaje
     └── lifecycle                  LifecycleTracker en Application.onCreate
 ```
 

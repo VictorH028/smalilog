@@ -2,7 +2,13 @@
 from __future__ import annotations
 
 from ._register_planner import plan_hook_registers
-from ._codegen import generate_d_log, generate_hook_enter, generate_hook_exit
+from ._codegen import (
+    generate_d_log_level,
+    generate_hook_enter,
+    generate_hook_exit,
+    generate_trace_out_correlated,
+    generate_trace_out_error,
+)
 from ._model import (
     SmaliMethod,
     count_parameter_registers,
@@ -23,7 +29,9 @@ __all__ = [
     "parse_smali_file",
     "generate_hook_enter",
     "generate_hook_exit",
-    "generate_d_log",
+    "generate_trace_out_correlated",
+    "generate_d_log_level",
+    "generate_trace_out_error",
     "is_reference",
     "parse_type_list",
     "params_raw",

@@ -10,6 +10,6 @@ Al usar como tag  SMALILOG_ACTIVITY llega la informacion como level INFO
 
 # Desde el móvil:
 ```
-smalilog hook App.smali -m onCreate -a log --tag SMALILOG_ACTIVITY --message "onCreate"
+smalilog hook info App.smali -m onCreate --tag SMALILOG_ACTIVITY --message "onCreate"
 ```
 

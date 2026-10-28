@@ -4,7 +4,7 @@ Un `Query` se aplica a MethodInfo / ClassInfo y devuelve un subconjunto.
 
 Ejemplos:
     q = Query.returning("Ljava/lang/String;").named("get*")
-    q = Query.calling("Lcom/deadnote/RemoteLogger;")
+    q = Query.calling("Lcom/deadnote/RemoteLog;")
     q = Query.containing_string("https://")
     q = Query.using_opcode("if-eqz")
     q = Query.named("onCreate").returning("V")

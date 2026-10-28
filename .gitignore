@@ -1,5 +1,4 @@
 __pycache__/
-build_payloads/
 *.py[cod]
 *.egg-info/
 build/
@@ -10,3 +9,4 @@ venv/
 .mypy_cache/
 .ruff_cache/
 final_decompile_xml/
+bin/native_lib/*.so
