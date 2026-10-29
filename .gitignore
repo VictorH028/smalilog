@@ -13,3 +13,7 @@ bin/native_lib/*.so
 
 # Clon upstream de Renef (referencia local; no forma parte del paquete)
 /renef/
+
+# Logs locales del servidor
+app_logs.txt
+app_logs.txt.*

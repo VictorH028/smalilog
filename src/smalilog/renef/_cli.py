@@ -13,6 +13,7 @@ from ._apply import (
     print_summary,
 )
 from ._recipe import parse_script
+from ._agent_cli import add_agent_subparsers, run_agent_command
 
 PRESETS_DIR = Path(__file__).resolve().parent / "presets"
 PRESETS = {
@@ -63,9 +64,13 @@ Ejemplos:
   smalilog renef apply --preset ssl --smali-dir ./apk --dry-run
   smalilog renef apply mi_hook.lua --smali-dir ./apk/smali
   smalilog renef apply --preset root --smali-dir ./apk --only RootBeer
+  smalilog renef install ./apk --build
+  smalilog renef runtime exec hook.lua --apk-dir ./apk
+  smalilog renef runtime status --package com.demo
 
-Los hooks nativos, Memory.*, Syscall.* y Java.use requieren el agente
-dinámico de Renef (root/dispositivo preparado); aquí solo se reportan.
+`apply` traduce hooks Java a Smali sin root. `install` y `runtime` usan el
+agente dinámico Renef embebido en la APK y se controlan por broadcast,
+también sin root.
 """,
     )
     sub = parser.add_subparsers(dest="cmd", metavar="<cmd>", required=True)
@@ -81,6 +86,7 @@ dinámico de Renef (root/dispositivo preparado); aquí solo se reportan.
     p.add_argument("--show", metavar="NOMBRE",
                    help="Muestra la ruta y el contenido de un preset")
 
+    add_agent_subparsers(sub)
     return parser
 
 
@@ -191,6 +197,8 @@ def run_renef(argv: list[str] | None = None,
         return _cmd_apply(args)
     if args.cmd == "presets":
         return _cmd_presets(args)
+    if args.cmd in {"install", "runtime"}:
+        return run_agent_command(args)
 
     parser.error(f"subcomando desconocido: {args.cmd}")
     return 2

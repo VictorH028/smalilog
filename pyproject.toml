@@ -24,7 +24,11 @@ smalilog = "smalilog.main:cli"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"smalilog.renef" = ["presets/*.lua"]
+"smalilog.renef" = [
+  "presets/*.lua",
+  "payload/smali/com/smalilog/agent/*.smali",
+  "payload/lib/arm64-v8a/*.so",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

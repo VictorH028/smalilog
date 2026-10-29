@@ -4,6 +4,8 @@ CLI de smalilog.
 Subcomandos:
     smalilog server [opciones]    Arranca el servidor de logs.
     smalilog hook   <cmd> [...]   Inyecta hooks en un archivo Smali.
+    smalilog manifest <cmd> [...] Analiza y parchea AndroidManifest.xml.
+    smalilog renef  <cmd> [...]   Puente Lua->Smali y agente Renef embebido.
 
 Ejemplos:
     smalilog
@@ -54,6 +56,16 @@ _COMMANDS = [
     ("server",     "Arranca el servidor HTTP que recibe los logs.",
      "smalilog server [--host H] [-p PORT]", False),
 
+    # --- manifest: análisis y parcheo del manifiesto ---
+    ("manifest info", "Resumen del manifiesto y puntos de entrada.",
+     "smalilog manifest info apk/AndroidManifest.xml", False),
+    ("manifest entrypoints", "Lista actividades, servicios y receivers.",
+     "smalilog manifest entrypoints apk/AndroidManifest.xml --smali-dir apk", False),
+    ("manifest permissions", "Lista los permisos declarados.",
+     "smalilog manifest permissions apk/AndroidManifest.xml", False),
+    ("manifest fix", "Agrega INTERNET y tráfico HTTP en claro.",
+     "smalilog manifest fix apk/AndroidManifest.xml", False),
+
     # --- hook: subcomandos ---
     ("hook list",       "Lista los métodos del archivo Smali.",
      "smalilog hook list <file>", True),
@@ -79,6 +91,10 @@ _COMMANDS = [
      "smalilog renef apply --preset ssl --smali-dir ./apk", False),
     ("renef presets",   "Lista los presets Renef incluidos.",
      "smalilog renef presets", False),
+    ("renef install",   "Instala el agente embebido en una APK descompilada.",
+     "smalilog renef install ./apk --build", False),
+    ("renef runtime",   "Controla la app instrumentada sin root.",
+     "smalilog renef runtime status --apk-dir ./apk", False),
 ]
 
 
@@ -118,8 +134,8 @@ def _print_main_help() -> None:
     for name, _s, example, _h in _COMMANDS:
         print(f"  {_c(_DIM, '$')} {example}")
     print()
-    print(_c(_DIM, "Usa 'smalilog hook <cmd> -h' o 'smalilog renef <cmd> -h' "
-            "para ver opciones de un subcomando."))
+    print(_c(_DIM, "Usa 'smalilog hook <cmd> -h', 'smalilog manifest <cmd> -h' "
+            "o 'smalilog renef <cmd> -h' para ver opciones de un subcomando."))
     print()
 
 
@@ -198,7 +214,7 @@ def _add_server_parser(subparsers) -> None:
 
 
 # --------------------------------------------------------------------------- #
-#  Parser principal (solo server; hook se delega)
+#  Parser principal (solo server; hook/manifest/renef se delegan)
 # --------------------------------------------------------------------------- #
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -211,8 +227,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "  server    Arranca el servidor HTTP que recibe los logs.\n"
             "  hook      Inyecta hooks de logging en archivos Smali\n"
             "            (ver ayuda con: smalilog hook -h)\n"
-            "  renef     Traduce scripts Lua de Renef a Smali sin root\n"
-            "            (ver ayuda con: smalilog renef -h)"
+            "  manifest  Analiza y parchea AndroidManifest.xml\n"
+            "            (ver ayuda con: smalilog manifest -h)\n"
+            "  renef     Traduce Lua a Smali e instala/controla el agente\n"
+            "            embebido sin root (ver ayuda con: smalilog renef -h)"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -222,7 +240,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "  smalilog hook list app.smali\n"
             "  smalilog hook enter app.smali -m Sf\n"
             "  smalilog hook lifecycle Application.smali -m onCreate\n"
+            "  smalilog manifest info ./apk/AndroidManifest.xml\n"
+            "  smalilog manifest fix ./apk/AndroidManifest.xml\n"
             "  smalilog renef apply --preset ssl --smali-dir ./apk\n"
+            "  smalilog renef install ./apk --build\n"
+            "  smalilog renef runtime status --apk-dir ./apk\n"
         ),
     )
     parser.add_argument("--version", action="version",
@@ -320,7 +342,15 @@ def cli(argv: list[str] | None = None) -> int:
     if argv and argv[0] == "hook":
         return run_hooker(argv[1:] or ["--help"], prog="smalilog hook")
 
-    # 2) renef → puente estático Lua → Smali.
+    # 2) manifest → análisis y parcheo del AndroidManifest.xml.
+    if argv and argv[0] == "manifest":
+        from smalilog.manifest import run_manifest
+        try:
+            return run_manifest(argv[1:] or ["--help"], prog="smalilog manifest")
+        except SystemExit as exc:
+            return exc.code if isinstance(exc.code, int) else EXIT_OK
+
+    # 3) renef → puente estático Lua → Smali.
     if argv and argv[0] == "renef":
         from smalilog.renef import run_renef
         try:
@@ -328,7 +358,7 @@ def cli(argv: list[str] | None = None) -> int:
         except SystemExit as exc:
             return exc.code if isinstance(exc.code, int) else EXIT_OK
 
-    # 3) lms → Typer. La ayuda básica no debe exigir dependencias
+    # 4) lms → Typer. La ayuda básica no debe exigir dependencias
     # opcionales (aiosqlite/pydantic) solo para mostrar comandos.
     if argv and argv[0] == "lms" and len(argv) == 1:
         print("Uso: smalilog lms <comando> [opciones]")

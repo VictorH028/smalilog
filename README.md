@@ -44,11 +44,12 @@ smalilog/
 │   ├── __main__.py          # python -m smalilog
 │   ├── config.py            # configuración común
 │   ├── injector/            # parser/orquestador y CLI de hooks
+│   ├── manifest/            # análisis y parcheo de AndroidManifest.xml
 │   ├── smali/               # modelo, parser, análisis y codegen
 │   ├── emit/                # instrucciones Dalvik/Smali
 │   ├── server/              # receptor HTTP /log
 │   ├── ui/                  # salida de terminal
-│   ├── renef/               # puente scripts Lua de Renef -> Smali
+│   ├── renef/               # puente Lua->Smali, agente y runtime
 │   └── lms/                 # consultas/memoria experimental opcional
 ├── tests/
 ├── docs/
@@ -67,12 +68,14 @@ python -m pip install -e .
 - [Índice completo de documentación](docs/README.md)
 - [Referencia de la CLI](docs/cli.md)
 - [Puente Renef → Smali](docs/renef.md)
+- [Manual del agente embebido](docs/agente.md)
 
 ## CLI
 
 ```bash
 smalilog --help
 smalilog server --help
+smalilog manifest --help
 smalilog hook --help
 ```
 
@@ -88,6 +91,19 @@ El endpoint de recepción es `POST /log` con JSON, por ejemplo:
 ```json
 {"level":"INFO","tag":"APP","message":"hola"}
 ```
+
+### Manifiesto
+
+Antes de instrumentar, prepara el manifiesto y localiza los puntos de entrada:
+
+```bash
+smalilog manifest info app_dir/AndroidManifest.xml --smali-dir app_dir
+smalilog manifest fix app_dir/AndroidManifest.xml
+```
+
+`manifest fix` agrega `INTERNET` y `usesCleartextTraffic` (necesario para HTTP
+local en Android 9+). `entrypoints` lista el launcher, actividades, servicios,
+receivers y providers.
 
 ### Hooks Smali
 
@@ -124,6 +140,40 @@ smalilog renef apply --preset root --smali-dir ./apk
 
 Detalles, matriz de compatibilidad y flujo con `apkeditor`: [`docs/renef.md`](docs/renef.md).
 Hay un ejemplo listo para instalar en `build_payloads/renef_demo.lua`.
+
+### Agente embebido instalable (sin root)
+
+Para ejecutar Lua en una APK ya descompilada, `smalilog renef install` copia
+`libagent.so`, añade el puente Smali (`com.smalilog.agent`), parchea el
+manifiesto (receptor exportado, `INTERNET`, tráfico HTTP en claro) y
+opcionalmente compila y firma:
+
+```bash
+apkeditor d -i app.apk -o ./apk
+smalilog renef install ./apk --dry-run
+smalilog renef install ./apk --build -o app-instrumentada.apk
+```
+
+Con la app ya instalada y abierta, arranca el servidor en otra terminal y
+contrólala por broadcast **sin root**:
+
+```bash
+# Terminal 1
+smalilog server --host 127.0.0.1 --port 9999 --log-level DEBUG
+
+# Terminal 2
+smalilog renef runtime ping --apk-dir ./apk
+smalilog renef runtime status --apk-dir ./apk
+smalilog renef runtime exec --code 'print("hola")' --apk-dir ./apk
+smalilog renef runtime push hook.lua --apk-dir ./apk
+smalilog renef runtime unhook --apk-dir ./apk
+```
+
+Los resultados no vuelven por la terminal: llegan a `app_logs.txt`. El agente
+admite scripts de hasta 256 KB. Solo incluye `arm64-v8a`; el receptor exportado
+no tiene permiso propio, así que úsalo solo en apps propias o de laboratorio.
+Si la APK original tiene otra firma, desinstálala antes o firma con tu propia
+clave. El flujo completo está en [`docs/agente.md`](docs/agente.md).
 
 `build_payloads` también incluye `libagent.so`, así que la app de prueba puede
 ejecutar Lua en runtime. Con la app en ejecución se envía un script por

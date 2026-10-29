@@ -12,8 +12,9 @@ prueba en un dispositivo real.
 | Pieza | Para qué sirve |
 |---|---|
 | `smalilog server` | Recibe logs JSON por HTTP y los escribe en un archivo. |
+| `smalilog manifest ...` | Prepara permisos y busca puntos de entrada en el manifiesto. |
 | `smalilog hook ...` | Inyecta llamadas de log en un archivo `.smali`. |
-| `smalilog renef ...` | Traduce scripts Lua de Renef a parches Smali. |
+| `smalilog renef ...` | Traduce Lua a Smali, instala el agente y lo controla. |
 | `build_payloads/` | App de prueba `com.deadnote` con `RemoteLog`, JNI y agente Renef. |
 | `liblogger.so` | Librería JNI que envía los logs al servidor. |
 
@@ -86,7 +87,32 @@ SMALI=$(find app_dir/smali* -name 'MainActivity.smali' | head -n1)
 echo "$SMALI"
 ```
 
-### 5.2 Encontrar el método
+### 5.2 Preparar el manifiesto y buscar puntos de entrada
+
+Antes de inyectar, revisa qué componentes tiene la app y agrega los permisos que
+necesita el logger HTTP:
+
+```bash
+smalilog manifest info app_dir/AndroidManifest.xml --smali-dir app_dir
+smalilog manifest fix app_dir/AndroidManifest.xml
+```
+
+`manifest fix` agrega `android.permission.INTERNET` y
+`android:usesCleartextTraffic="true"` si faltan, con copia `.bak`. Sin el
+segundo, Android 9+ puede bloquear el HTTP a `127.0.0.1`.
+
+`manifest entrypoints` lista el launcher y los componentes exportados; úsalo
+para elegir qué método observar:
+
+```bash
+smalilog manifest entrypoints app_dir/AndroidManifest.xml --smali-dir app_dir
+smalilog manifest entrypoints app_dir/AndroidManifest.xml --json
+```
+
+Si el manifiesto es binario, descompila primero con `apkeditor`; la herramienta
+lo detecta y te lo indica.
+
+### 5.3 Encontrar el método
 
 ```bash
 smalilog hook list "$SMALI"
@@ -99,7 +125,7 @@ Para ver el plan de registros antes de tocar nada:
 smalilog hook analyze "$SMALI" -m onCreate
 ```
 
-### 5.3 Inyectar
+### 5.4 Inyectar
 
 ```bash
 # Entrada y salida
@@ -121,7 +147,7 @@ smalilog hook info "$SMALI" \
 El inyector crea un `.bak` salvo que uses `--no-backup`. Los métodos `abstract` y
 `native` no se instrumentan; `<init>`/`<clinit>` están bloqueados para stubs.
 
-### 5.4 Recompilar, firmar e instalar
+### 5.5 Recompilar, firmar e instalar
 
 ```bash
 apkeditor b -i app_dir -o app_unsigned.apk
@@ -135,7 +161,7 @@ bash "$PREFIX/lib/termux-apk-make/toolz/apksigner" sign \
 Instala `app_patched.apk` manualmente en el dispositivo (el instalador de
 Android pedirá confirmación). Desinstala la versión anterior si la firma cambia.
 
-### 5.5 Ver los logs
+### 5.6 Ver los logs
 
 Abre la app y mira la terminal del servidor o:
 
@@ -172,6 +198,64 @@ Los hooks nativos (`lib*.so`, `Memory.*`, `Syscall.*`, `Java.use`) no se pueden
 traducir sin el agente dinámico; el reporte indica cuáles se omitieron y por qué.
 La referencia completa está en [`renef.md`](renef.md).
 
+## 6.1. Flujo B2: agente embebido en cualquier APK (sin root)
+
+Para cargar Lua en runtime en una APK que no sea `build_payloads`, descompila,
+instala el payload y reconstruye:
+
+```bash
+apkeditor d -i app.apk -o ./app
+smalilog renef install ./app --dry-run
+smalilog renef install ./app --build -o app-instrumentada.apk
+```
+
+`install` copia `libagent.so`, añade el puente Smali y parchea el manifiesto
+(receptor exportado, `INTERNET` y `usesCleartextTraffic`). Usa `--force` si el
+árbol ya tenía un `libagent.so` o las clases del puente. Si no usas `--build`,
+compila y firma a mano:
+
+```bash
+apkeditor b -i ./app -o app-unsigned.apk
+
+bash "$PREFIX/lib/termux-apk-make/toolz/apksigner" sign \
+  --ks "$PREFIX/lib/termux-apk-make/toolz/key.keystore" \
+  --ks-pass pass:password --min-sdk-version 24 \
+  --out app-instrumentada.apk app-unsigned.apk
+```
+
+Si la app original tiene otra firma, desinstálala antes o firma con tu propia
+clave (`--ks`/`--ks-pass`); Android no permite actualizar con una firma distinta.
+Verifica la firma:
+
+```bash
+"$PREFIX/lib/termux-apk-make/toolz/apksigner" verify --verbose app-instrumentada.apk
+```
+
+Instala la APK, ábrela y arranca el servidor de logs en otra terminal antes de
+controlar:
+
+```bash
+# Terminal 1
+smalilog server --host 127.0.0.1 --port 9999 --log-level DEBUG
+
+# Terminal 2
+smalilog renef runtime ping --apk-dir ./app
+smalilog renef runtime status --apk-dir ./app
+smalilog renef runtime exec --code 'print("hola")' --apk-dir ./app
+smalilog renef runtime push hook.lua --apk-dir ./app
+smalilog renef runtime unhook --apk-dir ./app
+```
+
+El comando `am` solo confirma el envío; los resultados aparecen en
+`app_logs.txt`. Los scripts admiten hasta 256 KB y se ejecutan dentro del
+proceso de la app, sin root. Solo se incluye `arm64-v8a` y el agente requiere
+Android 24+; el receptor exportado no tiene permiso propio, úsalo solo en
+apps propias o de laboratorio.
+
+El flujo detallado, incluyendo instalación con `--force`, ADB, `push`,
+interpretación de logs y solución de problemas, está en
+[`agente.md`](agente.md).
+
 ## 7. Flujo C: runtime Renef en la app de prueba
 
 `build_payloads` incluye `libagent.so` y un receptor de broadcasts. Esto permite
@@ -204,11 +288,15 @@ restaura los hooks). El detalle está en [`renef.md`](renef.md), sección 7c.
 
 | Síntoma | Causa / solución |
 |---|---|
-| No aparece nada en `app_logs.txt` | Revisa host/puerto, que la app tenga `INTERNET` y que el servidor esté en `DEBUG` si esperas `RemoteLog.d`. |
+| No aparece nada en `app_logs.txt` | Revisa host/puerto, ejecuta `smalilog manifest fix`, y usa `--log-level DEBUG` si esperas `RemoteLog.d`. |
 | `apksigner: /bin/bash: bad interpreter` | `termux-fix-shebang "$PREFIX/lib/termux-apk-make/toolz/apksigner"` y reintenta. |
 | `run-as: permission denied` | Usa `LUA_PUSH` en la app de prueba; no dependas de `run-as` en OEM restrictivos. |
+| `Broadcast sent without waiting for result` y no hay logs | Es normal que `am` no espere. Comprueba que `smalilog server` esté activo, el host/puerto y `app_logs.txt`. |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | La firma cambió. Desinstala la app o firma con la misma clave. |
+| `PING` responde pero `STATUS` falla | El agente no cargó: revisa ABI `arm64-v8a`, API 24+ y reinstala con `--force`. |
 | Hooks duplicados en los logs | Fuerza la detención de la app o envía `LUA_UNHOOK` antes de recargar. |
 | `NoClassDefFoundError: Lcom/deadnote/RemoteLog;` | La APK no incluye el logger. Añade `RemoteLog` + `liblogger.so` o usa `--logger-class` con una clase existente. |
+| `No se pudo leer el AndroidManifest.xml` | Es AXML binario. Descompila con `apkeditor d` y usa el manifiesto en texto. |
 | `hook lifecycle` falla | Solo funciona en `Application.onCreate` y espera `Lcom/deadnote/LifecycleTracker;`. |
 | El método se omite | Es `abstract`/`native`, no existe con esa firma o es un constructor. |
 
@@ -218,5 +306,6 @@ restaura los hooks). El detalle está en [`renef.md`](renef.md), sección 7c.
 - [`cli.md`](cli.md): referencia de todos los comandos y opciones.
 - [`injector.md`](injector.md): cómo funciona la inyección Smali por dentro.
 - [`renef.md`](renef.md): puente Lua → Smali y runtime por broadcast.
+- [`agente.md`](agente.md): manual completo del agente embebido sin root.
 - [`android/RemoteLog.md`](android/RemoteLog.md): API del logger y límites.
 - [`legacy/`](legacy/README.md): notas históricas, no son guía de uso.

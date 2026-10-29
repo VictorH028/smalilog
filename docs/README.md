@@ -9,8 +9,15 @@ uso de la documentación interna y del material histórico.
 | Documento | Para qué |
 |---|---|
 | [Guía rápida](guia-rapida.md) | Instalación, primer servidor y flujo completo con una APK. |
-| [Referencia CLI](cli.md) | Comandos, opciones, códigos de salida y ejemplos. |
+| [Referencia CLI](cli.md) | Comandos, opciones, códigos de salida y ejemplos (incluye `manifest`). |
+| [Manual del agente](agente.md) | Flujo completo sin root: instalar, firmar, arrancar el servidor, controlar y limpiar. |
 | [Configuración](configuration.md) | `config.toml`, variables `SMALILOG_*` y límites del servidor. |
+
+## Manifiesto y puntos de entrada
+
+Usa `smalilog manifest info` para revisar permisos, launcher y componentes, y
+`smalilog manifest fix` para agregar `INTERNET` y tráfico HTTP en claro. La
+referencia completa está en [`cli.md`](cli.md#smalilog-manifest).
 
 ## Instrumentación Smali
 
@@ -23,7 +30,8 @@ uso de la documentación interna y del material histórico.
 
 | Documento | Contenido |
 |---|---|
-| [Puente Renef → Smali](renef.md) | Comandos, compatibilidad, presets y runtime por broadcast (§7c). |
+| [Puente Renef → Smali](renef.md) | Comandos, compatibilidad, presets, agente embebido y runtime por broadcast (§7c y §7d). |
+| [Manual del agente embebido](agente.md) | Guía de uso diaria del puente nuevo `com.smalilog.agent`. |
 
 ## Servidor y app de prueba
 
@@ -48,7 +56,7 @@ Estos documentos se conservan como referencia, pero **no son la guía actual**:
 
 ## Estado de la documentación
 
-- **Guía rápida y CLI**: pensadas para usuarios nuevos.
+- **Guía rápida, manual del agente y CLI**: pensadas para usuarios nuevos.
 - **Inyector y Renef**: referencia técnica; verificar contra el código si algo
   no coincide con `--help`.
 - **App de prueba**: describe las clases de `build_payloads/`, no una API

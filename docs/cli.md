@@ -1,11 +1,13 @@
 # Referencia de la CLI
 
-`smalilog` tiene tres grupos de comandos: `server`, `hook` y `renef`. La ayuda
-de cada subcomando es la fuente más actualizada:
+`smalilog` tiene cuatro grupos principales: `server`, `manifest`, `hook` y
+`renef`; `lms` es experimental y se carga aparte. La ayuda de cada subcomando
+es la fuente más actualizada:
 
 ```bash
 smalilog --help
 smalilog server --help
+smalilog manifest <cmd> --help
 smalilog hook <cmd> --help
 smalilog renef <cmd> --help
 ```
@@ -55,6 +57,64 @@ curl -X POST http://127.0.0.1:9999/log \
   -H 'Content-Type: application/json' \
   -d '{"level":"INFO","tag":"APP","message":"hola"}'
 ```
+
+## `smalilog manifest`
+
+Analiza el `AndroidManifest.xml` ya descompilado y agrega lo mínimo para que
+los logs HTTP funcionen: permiso `INTERNET` y tráfico en claro hacia
+`127.0.0.1`. El manifiesto debe estar en texto; si es binario (AXML), primero
+descompila la APK con `apkeditor`.
+
+```bash
+smalilog manifest info apk/AndroidManifest.xml
+smalilog manifest entrypoints apk/AndroidManifest.xml --smali-dir apk
+smalilog manifest permissions apk/AndroidManifest.xml
+smalilog manifest fix apk/AndroidManifest.xml
+```
+
+### `manifest info`
+
+Muestra paquete, versión, aplicación, `debuggable`, `usesCleartextTraffic`,
+permisos, launcher, componentes y enlaces profundos. Con `--smali-dir` añade
+las clases Smali que heredan directamente de `Application`, `Activity`, `Service`,
+`BroadcastReceiver` o `ContentProvider`. Acepta `--json`.
+
+### `manifest entrypoints`
+
+Lista actividades, servicios, receivers, providers y `activity-alias`, con su
+estado `exported`, permisos y `intent-filter`. Es la forma rápida de localizar
+el launcher y los puntos de entrada que conviene instrumentar.
+
+| Opción | Descripción |
+|---|---|
+| `--smali-dir RUTA` | Busca también clases de entrada en el árbol Smali. |
+| `--json` | Salida JSON con componentes, launcher y clases Smali. |
+
+### `manifest permissions`
+
+Lista los permisos declarados. Con `--json` devuelve
+`{"permissions": [...]}`.
+
+### `manifest fix`
+
+Agrega `android.permission.INTERNET` y
+`android:usesCleartextTraffic="true"` si faltan. Es idempotente: ejecutarlo dos
+veces no duplica nada. Crea `AndroidManifest.xml.bak` salvo que uses
+`--no-backup` o `--output`.
+
+| Opción | Descripción |
+|---|---|
+| `--permission PERMISO` | Añade un `<uses-permission>` adicional (repetible). |
+| `--no-internet` | No agrega `INTERNET`. |
+| `--no-cleartext` | No modifica `usesCleartextTraffic`. |
+| `-o`, `--output` | Escribe en otro archivo y no toca el original. |
+| `--dry-run` | Muestra los cambios sin escribir. |
+| `--no-backup` | No crea `.bak`. |
+
+`usesCleartextTraffic` es necesario en Android 9+ para que la app pueda enviar
+HTTP a `127.0.0.1`. Si el manifiesto usa `android:networkSecurityConfig`, la
+herramienta avisa: esa configuración puede tener prioridad y requerir una
+excepción de red para `localhost`.
 
 ## `smalilog hook`
 
@@ -160,6 +220,67 @@ smalilog renef presets --show ssl
 ```
 
 Lista o muestra los presets `ssl` y `root`.
+
+### `renef install`
+
+```bash
+smalilog renef install APK_DESCOMPILADA [opciones]
+```
+
+Copia `libagent.so`, las clases Smali del puente y parchea el manifiesto con el
+receptor exportado, `INTERNET` y `usesCleartextTraffic`. Pensado para el árbol
+que produce `apkeditor d` (con `AndroidManifest.xml`, `smali/` y `root/lib/` o
+`lib/`).
+
+| Opción | Descripción |
+|---|---|
+| `--build` | Compila con `apkeditor b` y firma con `apksigner`. |
+| `-o, --output APK` | Salida para `--build`; por defecto `<nombre>-smalilog.apk` junto al árbol. |
+| `--agent-so RUTA` | Usa otro `libagent.so` (arm64-v8a). |
+| `--payload-dir RUTA` | Payload alternativo; solo para pruebas del instalador. |
+| `--permission PERMISO` | Añade un `<uses-permission>` adicional (repetible); no protege el receptor. |
+| `--no-internet` | No agregar `android.permission.INTERNET`. |
+| `--no-cleartext` | No habilitar `usesCleartextTraffic`. |
+| `--force` | Reemplaza clases o `libagent.so` existentes. |
+| `--no-backup` | No crear el respaldo externo `.<nombre>.smalilog-backup/`. |
+| `--dry-run` | Muestra el plan sin escribir. |
+| `--ks KEYSTORE` | Keystore para `--build` (por defecto el de Termux). |
+| `--ks-pass CLAVE` | Clave del keystore, sin el prefijo `pass:` (por defecto `password`). |
+
+`install` es idempotente y crea un respaldo externo
+`.<nombre>.smalilog-backup/`; no deja `.bak` dentro de la APK. Usa `--force` si
+ya existen clases o un `libagent.so` con otro contenido. Sin `--build` solo
+parchea el árbol; compila y firma después.
+
+### `renef runtime`
+
+```bash
+smalilog renef runtime <exec|push|status|ping|unhook> [opciones]
+```
+
+Envía una orden por `am broadcast` al receptor del agente. No necesita root.
+
+| Opción | Descripción |
+|---|---|
+| `--package APP` | Package de la app instrumentada. |
+| `--apk-dir DIR` | APK descompilada para leer el package (por defecto `.`). |
+| `--manifest XML` | Manifiesto concreto. |
+| `--adb` / `--serial SERIE` | Ejecuta el broadcast con `adb`; `--serial` implica `--adb`. |
+| `--host IP` / `--port PUERTO` | Servidor de logs alternativo. |
+| `--action` / `--receiver` | Action/clase del receptor (avanzado). |
+| `--dry-run` | Imprime el comando sin ejecutarlo. |
+
+`exec` acepta un archivo `.lua` o `--code '...'` (exactamente uno); `push` acepta
+un archivo y opcionalmente `--name`, y lo guarda en `files/smalilog/` antes de
+ejecutarlo. `status` comprueba el agente y `unhook` cierra la sesión para que el
+agente restaure los hooks.
+
+El comando `am` solo confirma el envío. El resultado real (`op=...`,
+`resultado ...`, `RenefLua ...`) aparece en el servidor, por defecto
+`app_logs.txt`. Se envía con `-f 0x20` para incluir paquetes detenidos; aun así,
+abre la app al menos una vez. `--host`/`--port` quedan guardados en el proceso
+de la app hasta que se cambien; si los omites después, se conserva el último
+valor. El flujo completo está en [`agente.md`](agente.md).
 
 ## Rutas y archivos
 

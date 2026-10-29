@@ -24,8 +24,10 @@ Este puente combina ambos mundos:
 4. Reporta con claridad lo que **solo** funciona con el agente Renef.
 
 El puente estático no ejecuta Lua ni código del script: solo se leen sus
-llamadas y literales. La sección **7c** describe una vía opcional de runtime que
-sí ejecuta Lua usando el `libagent.so` incluido en `build_payloads`.
+llamadas y literales. La sección **7c** describe el puente de runtime antiguo
+de `build_payloads`; la sección **7d** y el
+[manual del agente](agente.md) describen el puente nuevo instalable en
+cualquier APK.
 
 ## 2. Módulos añadidos
 
@@ -233,7 +235,12 @@ aplicó (revisa que hayas usado el árbol descompilado correcto y vuelve a
 recompilar). Si no aparece nada, revisa que el servidor esté escuchando y que
 la app tenga permiso `INTERNET`.
 
-## 7c. Runtime con `libagent.so` y órdenes por broadcast
+## 7c. Runtime antiguo de `build_payloads` por broadcast
+
+Este apartado describe el puente `com.deadnote` que ya viene dentro de
+`build_payloads`: action `com.deadnote.ACCION_DESDE_TERMUX`, receptor
+`com.deadnote.ReceptorTermux` y órdenes `LUA_*`. Para instrumentar cualquier
+otra APK usa el puente nuevo de §7d.
 
 `build_payloads` ya incluye `lib/arm64-v8a/libagent.so`, el agente Renef con
 motor Lua. La app lo carga desde `RemoteLog` y el agente abre un socket UNIX
@@ -336,6 +343,83 @@ Notas de comportamiento:
 - `LUA` acepta rutas absolutas legibles por la app o rutas relativas a
   `getFilesDir()` / `getExternalFilesDir()`. En Android 13+ no uses
   `/sdcard/Download` sin permiso de almacenamiento; usa `run-as` como arriba.
+
+## 7d. Instalación genérica del agente en una APK descompilada
+
+`smalilog renef install` convierte cualquier APK descompilada en una app con el
+agente embebido, sin depender de las clases de `build_payloads`. El flujo de uso
+completo, con compilación, firma, control, logs y problemas comunes, está en el
+[manual del agente](agente.md).
+
+```bash
+apkeditor d -i app.apk -o ./app
+smalilog renef install ./app --build -o app-instrumentada.apk
+```
+
+El instalador:
+
+1. Copia `payload/lib/arm64-v8a/libagent.so` a `root/lib/arm64-v8a/` (o
+   `lib/arm64-v8a/`).
+2. Añade las clases Smali del puente en `smali/classes/com/smalilog/agent/`.
+3. Inserta en el manifiesto un receptor exportado
+   `com.smalilog.agent.AgentReceiver` con la action
+   `com.smalilog.agent.ACTION`.
+4. Agrega `android.permission.INTERNET` y
+   `android:usesCleartextTraffic="true"` (idempotente, con respaldo externo
+   `.<nombre>.smalilog-backup/` para no incluirlo en la APK).
+
+Con `--build`, reconstruye y firma con `apkeditor b` y `apksigner`. El payload
+solo incluye `arm64-v8a` y el agente requiere Android 24+; si la APK es universal,
+conserva sus otras ABIs.
+
+`--build` firma con la clave de `termux-apk-make` por defecto. Si la app original
+usa otra firma, Android rechazará la actualización: desinstala la original o
+pasa `--ks`/`--ks-pass` con tu clave.
+
+### Control sin root
+
+```bash
+smalilog renef runtime ping --apk-dir ./app
+smalilog renef runtime status --apk-dir ./app
+smalilog renef runtime exec hook.lua --apk-dir ./app
+smalilog renef runtime push hook.lua --apk-dir ./app
+smalilog renef runtime unhook --apk-dir ./app
+```
+
+Internamente se ejecuta:
+
+```bash
+am broadcast -f 0x20 -a com.smalilog.agent.ACTION \
+  -n com.demo/com.smalilog.agent.AgentReceiver \
+  --es op EXEC --es b64 <lua_base64>
+```
+
+`-f 0x20` incluye paquetes detenidos (`FLAG_INCLUDE_STOPPED_PACKAGES`); aun así,
+abre la app al menos una vez tras instalarla.
+
+Órdenes: `PING` (receptor vivo), `STATUS` (agente conectado), `EXEC` (Lua en
+base64), `PUSH` (guarda en `files/smalilog/` y ejecuta) y `UNHOOK` (cierra la
+sesión; el agente restaura los hooks). El resultado se envía a
+`http://127.0.0.1:9999/log` por defecto; usa `--host`/`--port` si el servidor
+está en otro equipo.
+
+### Límites y seguridad
+
+- Scripts de hasta **256 KB** (el límite de 30 KB es solo del puente antiguo de
+  `build_payloads`).
+- El receptor es `exported="true"` y no declara permiso propio: cualquier app
+  podría enviarle órdenes. Es aceptable para laboratorio/apps propias; para
+  producción protege el receptor con `android:permission` de nivel `signature`
+  o valida un token.
+- Si el manifiesto usa `android:networkSecurityConfig`, revisa que permita
+  tráfico HTTP local; `usesCleartextTraffic` puede ser ignorado.
+- El agente se ejecuta dentro del proceso de la app; si la app se detiene, hay
+  que volver a enviar el script. Tras un `force-stop`, abre la app antes de
+  intentar el broadcast: Android puede no entregar órdenes a paquetes detenidos.
+- Usa `--force` al reinstalar el payload si el árbol ya tiene un `libagent.so`
+  o clases del puente con otro contenido.
+- El manual del agente incluye la lista de comprobación y la tabla de errores:
+  [`agente.md`](agente.md).
 
 ## 8. Interpretación del reporte
 

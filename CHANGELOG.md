@@ -2,6 +2,19 @@
 
 ## Sin publicar
 
+- Añadido `smalilog renef install`: instala el agente Renef embebido en una APK
+  descompilada (libagent.so arm64-v8a, puente Smali `com.smalilog.agent`,
+  receptor exportado, INTERNET y cleartext), con `--build` para compilar/firmar.
+- Añadido `smalilog renef runtime {ping,status,exec,push,unhook}` para controlar
+  la app por `am broadcast` (o `--adb`) sin root; scripts de hasta 256 KB y logs
+  al servidor smalilog. El broadcast usa `-f 0x20` para incluir paquetes
+  detenidos y `exec` ya no muestra un `--name` que no se usaba.
+- Nuevo manual `docs/agente.md` con flujo completo, compilación/firma, control,
+  scripts, lectura de logs, seguridad, limpieza y solución de problemas.
+  Verificado en dispositivo con `com.deadnote`: `PING`, `STATUS`, `EXEC`,
+  `PUSH`, `UNHOOK` y hooks `demoRenefCheck`/`demoRenefLabel`/`prueba1`.
+- Nuevo payload en `src/smalilog/renef/payload/` (Smali del puente + libagent.so
+  recompilado con `main_cmd` de 2 MB) y tests `tests/agent_test.py`.
 - Añadido `smalilog renef`: puente estático que traduce scripts Lua de Renef
   (hooks Java con `args.skip`/`return` constante y observación) a Smali, sin root.
 - Nuevo módulo `src/smalilog/renef/` con lector Lua, clasificación de recetas,
@@ -19,8 +32,9 @@
   restaura hooks y resetea la guarda Lua), con script de ejemplo
   `build_payloads/runtime_hook.lua` y APK `build_payloads/build/renef_runtime.apk`.
 - En runtime, los booleanos se modifican con `JNI.boolean(false)`; el agente
-  ignora el `return false` directo de Lua. Límite de script: 30 KB. Los logs de
-  broadcast ya no vuelcan el base64 completo.
+  ignora el `return false` directo de Lua. Límite del puente antiguo: 30 KB;
+  el puente nuevo `com.smalilog.agent` admite 256 KB. Los logs de broadcast ya
+  no vuelcan el base64 completo.
 - Reparado el shebang de `apksigner` de `termux-apk-make` en Termux
   (`termux-fix-shebang`), por lo que `termux-apk-make build_payloads` vuelve a
   firmar la APK sin pasos manuales.
@@ -30,9 +44,13 @@
   históricas.
 - Añadida la opción `--logger-class` a `smalilog hook` para APKs que no usan
   `Lcom/deadnote/RemoteLog;`.
+- Nuevo subcomando `smalilog manifest` con `info`, `entrypoints`,
+  `permissions` y `fix`: analiza el AndroidManifest.xml, lista launcher y
+  componentes, y agrega `INTERNET` + `usesCleartextTraffic` de forma idempotente.
+  `entrypoints` acepta `--smali-dir` para localizar clases Smali de entrada.
 - `pytest` limitado a `tests/` para no recolectar los tests del árbol `renef/`.
 - Versión `0.3.0` en `pyproject.toml` y `config.VERSION`.
-- Suite actual: 57 pruebas pasando.
+- Suite actual: 97 pruebas pasando.
 - Alineada la inyección con la API real del payload (`RemoteLog`: `traceIn`/`traceOut`).
 - Corregido el cálculo de temporales y el boxeo de primitivos en `_codegen.py`.
 - Implementados `hook both` y los niveles `debug/info/warn/error`; eliminados subcomandos sin implementar.
